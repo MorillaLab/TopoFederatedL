@@ -12,7 +12,7 @@
 
 New methodology for Federated Learning (guarantees data privacy preservation!) using TDA 
 
-![Topo_FederatedL()
+![Topo_FederatedL(https://github.com/MorillaLab/TopoFederatedL/blob/main/Topo_FL.png)
 
 # Topology and Topological Data Analysis (TDA) in Federated Learning  
 
