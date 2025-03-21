@@ -12,6 +12,8 @@
 
 New methodology for Federated Learning (guarantees data privacy preservation!) using TDA 
 
+![Topo_FederatedL()
+
 # Topology and Topological Data Analysis (TDA) in Federated Learning  
 
 Applying **topology** and **topological data analysis (TDA)** to **federated learning (FL)** is an emerging and promising direction. It enhances FL by improving data representation, detecting structural patterns, handling heterogeneity, and ensuring robustness.  
