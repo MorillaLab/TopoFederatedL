@@ -66,7 +66,7 @@ Instead of sharing model gradients (which can leak private data), clients send *
 
 ## Potential Research Directions  
 - **Topologically-aware optimization for FL aggregation** (e.g., replacing FedAvg with a topology-driven approach).  
-- **TDA-based model personalization** in FL (e.g., tailoring local models based on shared topological features).  
+- **TDA-based model personalisation** in FL (e.g., tailoring local models based on shared topological features).  
 - **Topology-driven differential privacy** (e.g., using persistent homology to abstract sensitive features before sharing).  
 - **Graph-based FL** using topological signatures for communication-efficient aggregation.  
 
