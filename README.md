@@ -1,14 +1,6 @@
 # TopoFederatedL
-<div style="text-align: justity;">
-<p align="left">
-  <a href="https://choosealicense.com/licenses/gpl-3.0/">
-    <img src="https://img.shields.io/badge/License-GPLv3-green" alt="">
-  </a>
-  <a href="https://github.com/MorillaLab/TopoTransformers/">
-    <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="">
-  </a>
-  
-</p>
+[![License](https://img.shields.io/badge/License-GPLv3-green)](https://choosealicense.com/licenses/gpl-3.0/)
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/MorillaLab/TopoTransformers/)
 
 New methodology for Federated Learning (guarantees data privacy preservation!) using TDA 
 
