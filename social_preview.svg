@@ -1,0 +1,264 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00080f;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#001a1a;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="accent2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="clientgrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:0.18"/>
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:0.03"/>
+    </linearGradient>
+    <linearGradient id="servergrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:0.04"/>
+    </linearGradient>
+    <filter id="bigblur"><feGaussianBlur stdDeviation="28"/></filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- Ambient glow -->
+  <ellipse cx="300" cy="380" rx="350" ry="220" fill="#06b6d4" opacity="0.06" filter="url(#bigblur)"/>
+  <ellipse cx="1050" cy="300" rx="300" ry="200" fill="#10b981" opacity="0.07" filter="url(#bigblur)"/>
+  <ellipse cx="680" cy="580" rx="200" ry="100" fill="#06b6d4" opacity="0.04" filter="url(#bigblur)"/>
+
+  <!-- ============================================================ -->
+  <!-- RIGHT: Federated network diagram                             -->
+  <!-- Server at top, 3 clients below, PH descriptors flowing up   -->
+  <!-- ============================================================ -->
+
+  <!-- Server node -->
+  <rect x="990" y="100" width="130" height="70" rx="12"
+        fill="url(#servergrad)" stroke="#10b981" stroke-width="2" stroke-opacity="0.9" filter="url(#glow)"/>
+  <text x="1055" y="127" font-family="'Segoe UI', sans-serif" font-size="14"
+        font-weight="700" fill="#34d399" text-anchor="middle">FL Server</text>
+  <text x="1055" y="145" font-family="'Segoe UI', sans-serif" font-size="11"
+        fill="#065f46" text-anchor="middle">Topo-Aware Agg.</text>
+  <!-- Lock icon on server -->
+  <text x="1055" y="163" font-family="'Segoe UI', sans-serif" font-size="13"
+        fill="#10b981" text-anchor="middle" opacity="0.6">🔒</text>
+
+  <!-- Dashed lines: server ↔ clients (PH descriptor, not gradients) -->
+  <!-- to client 1 -->
+  <line x1="1010" y1="170" x2="870" y2="280" stroke="#06b6d4"
+        stroke-width="1.5" stroke-dasharray="6,4" stroke-opacity="0.5"/>
+  <!-- to client 2 -->
+  <line x1="1055" y1="170" x2="1055" y2="278" stroke="#06b6d4"
+        stroke-width="1.5" stroke-dasharray="6,4" stroke-opacity="0.5"/>
+  <!-- to client 3 -->
+  <line x1="1100" y1="170" x2="1200" y2="280" stroke="#06b6d4"
+        stroke-width="1.5" stroke-dasharray="6,4" stroke-opacity="0.5"/>
+
+  <!-- PH descriptor labels on lines -->
+  <text x="930" y="240" font-family="'Segoe UI', sans-serif" font-size="10"
+        fill="#67e8f9" opacity="0.7" transform="rotate(-35, 930, 240)">PH descriptor</text>
+  <text x="1068" y="228" font-family="'Segoe UI', sans-serif" font-size="10"
+        fill="#67e8f9" opacity="0.7">PH descriptor</text>
+  <text x="1145" y="228" font-family="'Segoe UI', sans-serif" font-size="10"
+        fill="#67e8f9" opacity="0.7" transform="rotate(32, 1145, 228)">PH descriptor</text>
+
+  <!-- Client 1 -->
+  <rect x="810" y="280" width="110" height="65" rx="10"
+        fill="url(#clientgrad)" stroke="#06b6d4" stroke-width="1.5" stroke-opacity="0.8"/>
+  <text x="865" y="304" font-family="'Segoe UI', sans-serif" font-size="12"
+        font-weight="600" fill="#67e8f9" text-anchor="middle">Client A</text>
+  <text x="865" y="320" font-family="'Segoe UI', sans-serif" font-size="10"
+        fill="#164e63" text-anchor="middle">Hospital</text>
+  <text x="865" y="336" font-family="'Segoe UI', sans-serif" font-size="10"
+        fill="#0e7490" text-anchor="middle">Local TDA ✓</text>
+
+  <!-- Client 2 -->
+  <rect x="995" y="280" width="110" height="65" rx="10"
+        fill="url(#clientgrad)" stroke="#06b6d4" stroke-width="1.5" stroke-opacity="0.8"/>
+  <text x="1050" y="304" font-family="'Segoe UI', sans-serif" font-size="12"
+        font-weight="600" fill="#67e8f9" text-anchor="middle">Client B</text>
+  <text x="1050" y="320" font-family="'Segoe UI', sans-serif" font-size="10"
+        fill="#164e63" text-anchor="middle">Clinic</text>
+  <text x="1050" y="336" font-family="'Segoe UI', sans-serif" font-size="10"
+        fill="#0e7490" text-anchor="middle">Local TDA ✓</text>
+
+  <!-- Client 3 -->
+  <rect x="1155" y="280" width="110" height="65" rx="10"
+        fill="url(#clientgrad)" stroke="#06b6d4" stroke-width="1.5" stroke-opacity="0.8"/>
+  <text x="1210" y="304" font-family="'Segoe UI', sans-serif" font-size="12"
+        font-weight="600" fill="#67e8f9" text-anchor="middle">Client C</text>
+  <text x="1210" y="320" font-family="'Segoe UI', sans-serif" font-size="10"
+        fill="#164e63" text-anchor="middle">Lab</text>
+  <text x="1210" y="336" font-family="'Segoe UI', sans-serif" font-size="10"
+        fill="#0e7490" text-anchor="middle">Local TDA ✓</text>
+
+  <!-- Wasserstein clustering label -->
+  <text x="1055" y="390" font-family="'Segoe UI', sans-serif" font-size="11"
+        fill="#10b981" text-anchor="middle" opacity="0.7" font-style="italic">
+    Wasserstein dist. → cluster → weighted agg.
+  </text>
+
+  <!-- Mini persistence diagrams per client -->
+  <!-- Client A PH -->
+  <g transform="translate(820, 370)">
+    <line x1="0" y1="55" x2="55" y2="0" stroke="#374151" stroke-width="0.6" stroke-dasharray="3,2"/>
+    <circle cx="8"  cy="38" r="3" fill="#06b6d4" opacity="0.8"/>
+    <circle cx="15" cy="30" r="3.5" fill="#67e8f9" opacity="0.9"/>
+    <circle cx="25" cy="18" r="2.5" fill="#06b6d4" opacity="0.8"/>
+    <circle cx="12" cy="48" r="2" fill="#f43f5e" opacity="0.7"/>
+    <circle cx="32" cy="42" r="2.5" fill="#f43f5e" opacity="0.7"/>
+    <text x="27" y="70" font-family="'Segoe UI', sans-serif" font-size="9"
+          fill="#4b5563" text-anchor="middle">PH(A)</text>
+  </g>
+
+  <!-- Client B PH -->
+  <g transform="translate(1005, 370)">
+    <line x1="0" y1="55" x2="55" y2="0" stroke="#374151" stroke-width="0.6" stroke-dasharray="3,2"/>
+    <circle cx="10" cy="42" r="3" fill="#06b6d4" opacity="0.8"/>
+    <circle cx="20" cy="25" r="3.5" fill="#67e8f9" opacity="0.9"/>
+    <circle cx="30" cy="15" r="3" fill="#06b6d4" opacity="0.8"/>
+    <circle cx="15" cy="50" r="2" fill="#f43f5e" opacity="0.7"/>
+    <circle cx="38" cy="38" r="2.5" fill="#f43f5e" opacity="0.7"/>
+    <text x="27" y="70" font-family="'Segoe UI', sans-serif" font-size="9"
+          fill="#4b5563" text-anchor="middle">PH(B)</text>
+  </g>
+
+  <!-- Client C PH -->
+  <g transform="translate(1163, 370)">
+    <line x1="0" y1="55" x2="55" y2="0" stroke="#374151" stroke-width="0.6" stroke-dasharray="3,2"/>
+    <circle cx="7"  cy="44" r="2.5" fill="#06b6d4" opacity="0.8"/>
+    <circle cx="18" cy="33" r="3.5" fill="#67e8f9" opacity="0.9"/>
+    <circle cx="28" cy="20" r="3" fill="#06b6d4" opacity="0.8"/>
+    <circle cx="40" cy="12" r="2" fill="#67e8f9" opacity="0.7"/>
+    <circle cx="22" cy="48" r="2" fill="#f43f5e" opacity="0.7"/>
+    <text x="27" y="70" font-family="'Segoe UI', sans-serif" font-size="9"
+          fill="#4b5563" text-anchor="middle">PH(C)</text>
+  </g>
+
+  <!-- Privacy vs gradient comparison -->
+  <rect x="800" y="480" width="460" height="80" rx="10"
+        fill="#001a1a" stroke="#10b981" stroke-width="1" stroke-opacity="0.3"/>
+  <text x="820" y="502" font-family="'Segoe UI', sans-serif" font-size="11"
+        fill="#f43f5e">✗ Standard FL:</text>
+  <text x="820" y="518" font-family="'Segoe UI', sans-serif" font-size="11"
+        fill="#4b5563">  share gradients → raw data reconstructable</text>
+  <text x="820" y="536" font-family="'Segoe UI', sans-serif" font-size="11"
+        fill="#10b981">✓ TopoFederatedL:</text>
+  <text x="820" y="552" font-family="'Segoe UI', sans-serif" font-size="11"
+        fill="#0e7490">  share PH descriptors → shape only, no raw data</text>
+
+  <!-- ============================================================ -->
+  <!-- LEFT PANEL: text                                             -->
+  <!-- ============================================================ -->
+
+  <!-- Vertical accent bar -->
+  <rect x="62" y="88" width="5" height="200" rx="3" fill="url(#accent)"/>
+
+  <!-- Title -->
+  <text x="88" y="148" font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+        font-size="72" font-weight="900" fill="white" letter-spacing="-2">TopoFederatedL</text>
+
+  <!-- Subtitle -->
+  <text x="90" y="190" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="19" fill="#34d399" letter-spacing="0.2">
+    Privacy-Preserving Federated Learning via TDA
+  </text>
+  <text x="90" y="216" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="15" fill="#6b7280">
+    Persistent Homology  ·  Wasserstein Aggregation  ·  Non-IID Robustness
+  </text>
+
+  <!-- Divider -->
+  <rect x="88" y="236" width="550" height="2" rx="1" fill="url(#accent)"/>
+
+  <!-- Stat boxes -->
+  <rect x="88" y="254" width="128" height="80" rx="10"
+        fill="#ffffff" fill-opacity="0.03" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.6"/>
+  <text x="152" y="286" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="22" font-weight="700" fill="#67e8f9" text-anchor="middle">Privacy</text>
+  <text x="152" y="304" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="13" fill="#6b7280" text-anchor="middle">by design</text>
+  <text x="152" y="320" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="11" fill="#4b5563" text-anchor="middle">PH descriptors</text>
+
+  <rect x="228" y="254" width="128" height="80" rx="10"
+        fill="#ffffff" fill-opacity="0.03" stroke="#10b981" stroke-width="1" stroke-opacity="0.6"/>
+  <text x="292" y="282" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="16" font-weight="700" fill="#34d399" text-anchor="middle">Non-IID</text>
+  <text x="292" y="300" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="16" font-weight="700" fill="#34d399" text-anchor="middle">Robust</text>
+  <text x="292" y="320" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="11" fill="#4b5563" text-anchor="middle">topo clustering</text>
+
+  <rect x="368" y="254" width="128" height="80" rx="10"
+        fill="#ffffff" fill-opacity="0.03" stroke="#f43f5e" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="432" y="282" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="14" font-weight="700" fill="#fda4af" text-anchor="middle">Adversarial</text>
+  <text x="432" y="300" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="14" font-weight="700" fill="#fda4af" text-anchor="middle">Detection</text>
+  <text x="432" y="320" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="11" fill="#4b5563" text-anchor="middle">topo anomalies</text>
+
+  <rect x="508" y="254" width="128" height="80" rx="10"
+        fill="#ffffff" fill-opacity="0.03" stroke="#a78bfa" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="572" y="286" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="22" font-weight="700" fill="#c4b5fd" text-anchor="middle">5</text>
+  <text x="572" y="304" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="13" fill="#6b7280" text-anchor="middle">research</text>
+  <text x="572" y="320" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="11" fill="#4b5563" text-anchor="middle">directions</text>
+
+  <!-- Tag pills -->
+  <g font-family="'Segoe UI', system-ui, sans-serif" font-size="13">
+    <rect x="88" y="356" width="130" height="28" rx="14"
+          fill="#06b6d4" fill-opacity="0.10" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.5"/>
+    <text x="153" y="375" fill="#67e8f9" text-anchor="middle">🔐 FL + Privacy</text>
+
+    <rect x="230" y="356" width="130" height="28" rx="14"
+          fill="#10b981" fill-opacity="0.10" stroke="#10b981" stroke-width="1" stroke-opacity="0.5"/>
+    <text x="295" y="375" fill="#34d399" text-anchor="middle">🌀 TDA / PH</text>
+
+    <rect x="372" y="356" width="145" height="28" rx="14"
+          fill="#a78bfa" fill-opacity="0.10" stroke="#a78bfa" stroke-width="1" stroke-opacity="0.5"/>
+    <text x="444" y="375" fill="#c4b5fd" text-anchor="middle">📡 Federated ML</text>
+
+    <rect x="529" y="356" width="120" height="28" rx="14"
+          fill="#f43f5e" fill-opacity="0.10" stroke="#f43f5e" stroke-width="1" stroke-opacity="0.5"/>
+    <text x="589" y="375" fill="#fda4af" text-anchor="middle">🏥 Healthcare</text>
+  </g>
+
+  <!-- Key insight box -->
+  <rect x="88" y="408" width="580" height="52" rx="8"
+        fill="#00080f" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.3"/>
+  <text x="104" y="428" font-family="'Segoe UI', sans-serif" font-size="13"
+        fill="#06b6d4" font-weight="600">Core innovation:</text>
+  <text x="104" y="448" font-family="'Segoe UI', sans-serif" font-size="12" fill="#6b7280">
+    Share topological summaries, not gradients — privacy preserved by construction
+  </text>
+
+  <!-- Wasserstein formula -->
+  <text x="88" y="487" font-family="'Courier New', monospace" font-size="13"
+        fill="#10b981" opacity="0.45">W₂(PH_A, PH_B) → cluster → topology-weighted FedAvg</text>
+
+  <!-- Bottom label -->
+  <text x="88" y="560" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="14" fill="#374151">
+    MorillaLab · Active Research · GPL-3.0
+  </text>
+  <text x="88" y="580" font-family="'Segoe UI', system-ui, sans-serif"
+        font-size="13" fill="#374151">
+    Federated Learning · Topological Data Analysis · Privacy by Design
+  </text>
+</svg>
