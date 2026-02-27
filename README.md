@@ -90,9 +90,9 @@ Persistent homology features encode essential structural information about the l
 
 ```
                     ┌─────────────────────────────┐
-                    │        FL Server             │
-                    │  Topology-Aware Aggregation  │
-                    │  (Wasserstein-weighted avg)  │
+                    │        FL Server            │
+                    │  Topology-Aware Aggregation │
+                    │  (Wasserstein-weighted avg) │
                     └──────────┬──────────────────┘
                                │
               ┌────────────────┼────────────────┐
