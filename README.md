@@ -234,7 +234,7 @@ Output:
   SCAFFOLD:  AUC=0.846
 ```
 
-### Custom dataset
+### 🗂️ Custom dataset
 
 ```python
 from framework.ptopofl import pTopoFLClient, pTopoFLServer, run_ptopofl_rounds
@@ -377,7 +377,7 @@ If you use this code or the ideas in this repository, please cite:
 
 ---
 
-🤝 Contributing
+## 🤝 Contributing
 We welcome contributions — FL aggregation strategies, new TDA feature types, privacy analysis, new application domains. Please open an issue before submitting a pull request. See CONTRIBUTING.md for guidelines.
 
 ---
