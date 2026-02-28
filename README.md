@@ -211,7 +211,7 @@ acc, auc = run_ptopofl_rounds(clients, server, n_rounds=15, verbose=True)
 print(f"Final AUC: {auc[-1]:.3f}")   # → 0.841
 ```
 
-### Run all baselines
+### 🔮 Run all baselines
 
 ```bash
 python experiments/experiments_extended.py
@@ -258,7 +258,7 @@ acc, auc = run_ptopofl_rounds(clients, server, n_rounds=20, verbose=True)
 
 ---
 
-## API reference
+## 🏗️ API reference
 
 ### `pTopoFLClient`
 
@@ -309,7 +309,7 @@ No external TDA library — H₀ via union-find, H₁ via triangle filtration, b
 
 ---
 
-## Reproducibility
+## ✅ Reproducibility
 
 All experiments use `random_state=42`. To reproduce the paper results:
 
@@ -350,7 +350,7 @@ Topology-guided clustering is the **primary driver**: removing it collapses the 
 
 ---
 
-## Citation
+## 🎈 Citation
 
 If you use this code or the ideas in this repository, please cite:
 
@@ -367,13 +367,18 @@ If you use this code or the ideas in this repository, please cite:
 
 ---
 
-## Related work from MorillaLab
+## 🔗 Related work from MorillaLab
 
 | Repo | Description |
 |---|---|
 | [TopoAttention](https://github.com/MorillaLab/TopoAttention) | Topological transformer for clinical prediction |
 | [TopoTransformers](https://github.com/MorillaLab/TopoTransformers) | TDA-augmented transformer architectures |
 | [GeoTop](https://github.com/MorillaLab/GeoTop) | Geometric + topological deep learning |
+
+---
+
+🤝 Contributing
+We welcome contributions — FL aggregation strategies, new TDA feature types, privacy analysis, new application domains. Please open an issue before submitting a pull request. See CONTRIBUTING.md for guidelines.
 
 ---
 
