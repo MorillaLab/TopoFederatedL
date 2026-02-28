@@ -2,7 +2,7 @@
 
 <img src="figures/fig_framework.png" alt="pTopoFL Framework" width="820"/>
 
-# pTopoFL · TopoFederatedL
+# 🔐 pTopoFL · TopoFederatedL
 
 **Personalised Federated Learning via Persistent Homology**
 
