@@ -377,10 +377,12 @@ If you use this code or the ideas in this repository, please cite:
 
 ---
 
-## License
+## 📜 License
 
 [GPL-3.0](LICENSE) — free to use, modify, and redistribute with attribution.
 
+---
+
 <div align="center">
-<sub>Built with NumPy, SciPy, and scikit-learn · No external TDA library required</sub>
+  Made with ❤️ by <a href="https://github.com/MorillaLab">MorillaLab</a>
 </div>
