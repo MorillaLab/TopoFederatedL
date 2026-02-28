@@ -356,8 +356,7 @@ If you use this code or the ideas in this repository, please cite:
 
 ```bibtex
 @article{morilla2025ptopofl,
-  title     = {Personalised Topology-Aware Federated Learning with
-               Privacy-Preserving Persistent Homology},
+  title     = {pTopoFL: Privacy-Preserving Personalised Federated Learning via Persistent Homology},
   author    = {Ginot, Grégory and Morilla, Ian},
   journal   = {arXiv preprint arXiv:2502.XXXXX},
   year      = {2026},
