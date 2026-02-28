@@ -45,7 +45,7 @@ The PH map is **many-to-one by construction** — infinitely many datasets share
 
 ---
 
-## Results
+## 📊 Results
 
 ### Healthcare scenario  *(8 hospitals, non-IID, 2 adversarial)*
 
