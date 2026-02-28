@@ -23,7 +23,7 @@
 
 ---
 
-## What is pTopoFL?
+## 🔍 What is pTopoFL?
 
 Standard federated learning has two unresolved tensions:
 
@@ -88,7 +88,7 @@ The PH map is **many-to-one by construction** — infinitely many datasets share
 
 ---
 
-## How it works
+## 🔬 How it works
 
 ### Three-step server aggregation
 
@@ -131,7 +131,7 @@ The same mathematical object (the persistence diagram) provides:
 
 ---
 
-## Repository structure
+## 📁 Repository structure
 
 ```
 TopoFederatedL/
@@ -168,7 +168,7 @@ TopoFederatedL/
 
 ---
 
-## Quick start
+## 🚀 Quick start
 
 ### Install
 
