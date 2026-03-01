@@ -111,7 +111,7 @@ where $t_i = \exp(-\max(z_i - 1, 0))$ is a trust weight that automatically down-
 
 **Step 3 — Inter-cluster blending**
 
-$$\theta_{C_j}^* = (1 - \alpha)\,\theta_{C_j} + \alpha\,\bar\theta, \quad \alpha = 0.3$$
+$$\theta_{C_j}^* = (1 - \alpha)\\cdot\theta_{C_j} + \alpha\\cdot\bar\theta, \quad \alpha = 0.3$$
 
 Blending prevents cluster-specific models from diverging. At $\alpha=0$: fully personalised. At $\alpha=1$: FedAvg.
 
