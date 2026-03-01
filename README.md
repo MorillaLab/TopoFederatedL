@@ -355,12 +355,20 @@ Topology-guided clustering is the **primary driver**: removing it collapses the 
 If you use this code or the ideas in this repository, please cite:
 
 ```bibtex
-@article{morilla2025ptopofl,
+@article{morilla2026ptopofl,
   title     = {pTopoFL: Privacy-Preserving Personalised Federated Learning via Persistent Homology},
   author    = {Ginot, Grégory and Morilla, Ian},
   journal   = {arXiv preprint arXiv:2502.XXXXX},
   year      = {2026},
   url       = {https://github.com/MorillaLab/TopoFederatedL}
+}
+
+@software{morilla2026ptopofl,
+  title     = {pTopoFL_v1.0.0},
+  author    = {Ginot, Grégory and Morilla, Ian},
+  journal   = {zenodo},
+  year      = {2026},
+  url       = {https://doi.org/10.5281/zenodo.18827595}
 }
 ```
 
