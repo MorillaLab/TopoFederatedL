@@ -14,7 +14,7 @@
 [![Paper](https://img.shields.io/badge/Paper-NeurIPS%20style-b31b1b?logo=arxiv)](paper/topofederatedl.tex)
 [![Nature CS](https://img.shields.io/badge/Target-Nature_Comput._Sci.-1a5276)](paper/ptopofl_natcomputsci.tex)
 [![Nature MI](https://img.shields.io/badge/Target-Nature_Mach._Intell.-1a5276)](paper/ptopofl_natmachintell.tex)
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18699204.svg)](https://doi.org/10.5281/zenodo.18827595)
 </div>
 
 <div align="center">
