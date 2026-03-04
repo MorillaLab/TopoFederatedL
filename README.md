@@ -159,6 +159,9 @@ TopoFederatedL/
 │   ├── fig_continual.png       # Topological signature stability
 │   └── fig_persistence_diagrams.png
 │
+├── notebooks/
+│   └── pTopoFL_deep_experiments.ipynb # pTopoFL run in deep learning models (high computational cost!)
+│
 └── paper/
     ├── topofederatedl.tex      # NeurIPS/ICML style (main preprint)
     ├── ptopofl_natcomputsci.tex  # Nature Computational Science version
