@@ -160,7 +160,7 @@ TopoFederatedL/
 │   └── fig_persistence_diagrams.png
 │
 ├── notebooks/
-│   └── pTopoFL_deep_experiments.ipynb # pTopoFL run in deep learning models (high computational cost!)
+│   └── pTopoFL_deep_experiments.ipynb # pTopoFL in deep learning models (only empirical purposes, high computational cost!)
 │
 └── paper/
     ├── topofederatedl.tex      # NeurIPS/ICML style (main preprint)
