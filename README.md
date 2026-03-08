@@ -12,8 +12,6 @@
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-3776ab?logo=python&logoColor=white)](https://python.org)
 [![NumPy](https://img.shields.io/badge/NumPy-only-013243?logo=numpy)](https://numpy.org)
 [![Paper](https://img.shields.io/badge/Paper-NeurIPS%20style-b31b1b?logo=arxiv)](paper/topofederatedl.tex)
-[![Nature CS](https://img.shields.io/badge/Target-Nature_Comput._Sci.-1a5276)](paper/ptopofl_natcomputsci.tex)
-[![Nature MI](https://img.shields.io/badge/Target-Nature_Mach._Intell.-1a5276)](paper/ptopofl_natmachintell.tex)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18699204.svg)](https://doi.org/10.5281/zenodo.18827595)
 </div>
 
@@ -164,8 +162,6 @@ TopoFederatedL/
 │
 └── paper/
     ├── topofederatedl.tex      # NeurIPS/ICML style (main preprint)
-    ├── ptopofl_natcomputsci.tex  # Nature Computational Science version
-    ├── ptopofl_natmachintell.tex # Nature Machine Intelligence version
     └── references.bib
 ```
 
