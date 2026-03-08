@@ -377,8 +377,7 @@ If you use this code or the ideas in this repository, please cite:
 
 | Repo | Description |
 |---|---|
-| [TopoAttention](https://github.com/MorillaLab/TopoAttention) | Topological transformer for clinical prediction |
-| [TopoTransformers](https://github.com/MorillaLab/TopoTransformers) | TDA-augmented transformer architectures |
+| [TopoAttention](https://github.com/MorillaLab/TopoAttention) | Topological augmented attention for clinical prediction |
 | [GeoTop](https://github.com/MorillaLab/GeoTop) | Geometric + topological deep learning |
 
 ---
