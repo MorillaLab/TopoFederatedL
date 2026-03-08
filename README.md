@@ -357,7 +357,7 @@ If you use this code or the ideas in this repository, please cite:
 @article{morilla2026ptopofl,
   title     = {pTopoFL: Privacy-Preserving Personalised Federated Learning via Persistent Homology},
   author    = {},
-  journal   = {arXiv preprint arXiv:2502.XXXXX},
+  journal   = {arXiv preprint arXiv:2603.04323}, 
   year      = {2026},
   url       = {https://github.com/MorillaLab/TopoFederatedL}
 }
