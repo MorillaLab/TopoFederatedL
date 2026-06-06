@@ -1,54 +1,89 @@
-# Contributing to TopoFederatedL
+# Contributing to pTopoFL
 
-Thank you for your interest! This is an active research project — contributions to the FL aggregation strategies, TDA feature pipelines, privacy analysis, or new application domains are very welcome.
+Thank you for your interest in contributing to pTopoFL.
+We welcome contributions across four areas:
 
-## 🐛 Reporting Bugs
+1. **New FL aggregation strategies** — alternative clustering methods, weighting schemes, or blending heuristics
+2. **Extended TDA features** — additional persistence statistics, filtrations, or descriptor types
+3. **Privacy analysis** — formal DP bounds for descriptor transmission, composition theorems
+4. **New application domains** — real federated healthcare datasets, cross-device FL, graph FL
 
-Open a [GitHub Issue](https://github.com/MorillaLab/TopoFederatedL/issues) with:
-- The script or notebook where the error occurs
-- Your environment (OS, Python, PyTorch, giotto-tda versions)
-- The full error traceback
-- A minimal reproducible example
+---
 
-## 💡 Suggesting Features or Research Directions
+## Before you start
 
-Open an issue tagged `enhancement`. Especially welcome:
-- New aggregation strategies (topology-weighted FedAvg, clustered FL)
-- Integration of differential privacy with topological abstraction
-- New TDA feature types for client-side representation
-- Benchmarks against FedProx, SCAFFOLD, pFedMe, FedNova
-- New application domains (finance, edge computing, NLP)
-- Theoretical privacy guarantees for topological descriptors
+Please **open an issue** before submitting a pull request, so we can discuss
+the proposed change and avoid duplicate work.
 
-## 🔧 Submitting Code
+---
 
-1. Fork the repository and create a branch from `main`:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   pip install flake8 pytest
-   ```
-3. Keep FL client/server code modular and well-documented.
-4. For any new TDA feature type, include:
-   - A docstring with mathematical definition and reference
-   - A privacy argument: why does this descriptor not leak raw data?
-5. Lint:
-   ```bash
-   flake8 . --max-line-length=127
-   ```
-6. Clear notebook outputs before committing.
-7. Open a pull request against `main` with motivation and results.
+## Development setup
 
-## 🔒 Privacy Contributions
+```bash
+git clone https://github.com/MorillaLab/TopoFederatedL
+cd TopoFederatedL
+pip install -r requirements.txt
+pip install pytest
+pip install -e .
+```
 
-Any contribution that modifies how client information is shared must include a **privacy analysis** explaining:
-- What information is transmitted
-- Whether raw data or individual records could be recovered from it
-- How it relates to differential privacy or other formal privacy guarantees
+Run the test suite to confirm your environment works:
 
-## 📜 License
+```bash
+pytest tests/ -v
+# All 38 tests should pass
+```
 
-By contributing, you agree your work will be released under GPL-3.0.
+---
+
+## Code standards
+
+- **Python ≥ 3.9.** Type hints encouraged but not required.
+- **No external TDA libraries** in the core `ptopofl/` package. All PH
+  computation uses NumPy and SciPy only. External libraries (e.g., Ripser,
+  GUDHI) may be used in notebooks but not in the package itself.
+- **Docstrings** on all public classes and methods (NumPy style).
+- **Reproducibility:** every stochastic component must accept a `random_state`
+  argument and produce identical results for the same seed.
+
+---
+
+## Adding a new baseline
+
+1. Implement the class in `ptopofl/baselines.py`.
+   It must expose `.fit(client_data, eval_data=None)` and `.metrics_` (list of
+   per-round dicts containing at least `{'round': int, 'auc': float, 'acc': float}`).
+2. Export it from `ptopofl/__init__.py`.
+3. Add a `test_<name>` method to `tests/test_package.py` (inherit the
+   `TestBaselines` pattern: check output format and AUC > 0.5).
+4. Add it to the `METHODS` list in `ptopofl/experiments/run_experiments.py`.
+
+---
+
+## Adding a new topological feature
+
+1. Add the computation to `ptopofl/descriptor.py`, inside `PHDescriptor.compute()`.
+2. Update the descriptor dimension constant `PHDescriptor.DIM` and the layout
+   table in the docstring.
+3. Update `README.md`, the descriptor-layout table in Appendix B of the paper,
+   and adjust `test_output_dimension` in the test suite.
+
+---
+
+## Pull request checklist
+
+- [ ] All existing tests pass (`pytest tests/ -v`)
+- [ ] New tests added for new functionality
+- [ ] Docstrings updated
+- [ ] `README.md` updated if the public API or results change
+- [ ] No author names or institutional affiliations added (for anonymous review compatibility)
+- [ ] `random_state` accepted by all stochastic functions
+
+---
+
+## Reporting a bug
+
+Use the issue tracker with the **Bug report** template. Please include:
+- Python version and OS
+- Minimal reproducible example
+- Full traceback
