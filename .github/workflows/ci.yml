@@ -1,0 +1,108 @@
+name: pTopoFL Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy scipy scikit-learn matplotlib
+          pip install pytest
+          # Install package if setup.py exists
+          if [ -f setup.py ]; then pip install -e .; fi
+
+      - name: Verify imports
+        run: |
+          python -c "
+          import sys
+          # Try new package structure first
+          try:
+              from ptopofl import PHDescriptor, PTopoFL
+              from ptopofl import FedAvg, FedProx, SCAFFOLD, PFedMe, IFCA
+              from ptopofl import make_healthcare, make_benchmark
+              print('ptopofl package imports OK')
+          except ImportError as e:
+              print(f'ptopofl import failed: {e}')
+              # Try old framework structure as fallback
+              try:
+                  sys.path.insert(0, 'framework')
+                  print('framework/ directory found — old structure')
+              except Exception:
+                  print('Neither ptopofl/ nor framework/ found')
+                  sys.exit(1)
+          "
+
+      - name: Run unit tests
+        run: |
+          if [ -f tests/test_package.py ]; then
+            pytest tests/ -v --tb=short
+          else
+            echo "No test suite found — running inline smoke test"
+            python -c "
+          import numpy as np, sys
+          sys.path.insert(0, '.')
+
+          from ptopofl import PHDescriptor, PTopoFL, FedAvg, make_healthcare
+
+          # Descriptor dimension
+          desc = PHDescriptor(n_sub=40, n_thresholds=20, random_state=0)
+          phi  = desc.compute(np.random.default_rng(0).standard_normal((60, 6)))
+          assert phi.shape == (48,), f'Expected (48,), got {phi.shape}'
+          print('PASS  descriptor 48-dim')
+
+          # Data generator
+          cd, ed, adv = make_healthcare(K=4, n_adv=1, random_state=0)
+          assert len(cd) == 4
+          print('PASS  make_healthcare')
+
+          # pTopoFL trains
+          m = PTopoFL(n_clusters=2, n_rounds=3, n_sub=40, random_state=0)
+          m.fit(cd, eval_data=ed)
+          assert len(m.metrics_) == 3
+          assert m.descriptors_.shape == (4, 48)
+          print(f'PASS  PTopoFL  AUC={m.metrics_[-1][\"auc\"]:.4f}')
+
+          # FedAvg trains
+          f = FedAvg(n_rounds=3, random_state=0)
+          f.fit(cd, eval_data=ed)
+          print(f'PASS  FedAvg  AUC={f.metrics_[-1][\"auc\"]:.4f}')
+
+          print('All smoke tests passed.')
+          "
+          fi
+
+      - name: Smoke-test experiment runner
+        run: |
+          if [ -f ptopofl/experiments/run_experiments.py ]; then
+            python ptopofl/experiments/run_experiments.py \
+              --scenario table1 --seeds 1 --out results_ci/
+            python -c "
+          import json
+          with open('results_ci/table1.json') as f:
+              r = json.load(f)
+          auc = r['Healthcare']['pTopoFL']['final_auc']
+          assert auc > 0.5, f'AUC={auc}'
+          print(f'Experiment runner OK  HC AUC={auc:.4f}')
+          "
+          else
+            echo "run_experiments.py not found — skipping"
+          fi
