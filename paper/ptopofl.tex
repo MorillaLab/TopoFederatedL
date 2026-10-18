@@ -1,0 +1,153 @@
+\documentclass[10pt]{article} % For LaTeX2e
+\usepackage{tmlr}
+% For the camera-ready version use \usepackage[accepted]{tmlr}; for arXiv \usepackage[preprint]{tmlr}.
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{multirow}
+\usepackage{mathtools}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds}
+% natbib and hyperref are loaded by tmlr.sty; do not load them again.
+
+% -----------------------------------------------------------------------
+% Notation
+% -----------------------------------------------------------------------
+\newcommand{\ptopofl}{\textsc{pTopoFL}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\calC}{\mathcal{C}}
+\newcommand{\calD}{\mathcal{D}}
+\newcommand{\Id}{\mathrm{Id}}
+\newcommand{\loc}{\mathrm{loc}}
+\newcommand{\Vtot}{V_{\mathrm{tot}}}
+\newcommand{\Vin}{V_{\mathrm{in}}}
+\newcommand{\Vbet}{V_{\mathrm{bet}}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\pinorm}[1]{\left\lVert #1 \right\rVert_{\pi}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\med}{med}
+\DeclareMathOperator{\MAD}{MAD}
+\DeclareMathOperator{\tr}{tr}
+
+% Theorem-like environments (shared counter)
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}{Assumption}
+\renewcommand{\theassumption}{A\arabic{assumption}}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% -----------------------------------------------------------------------
+% Results produced by ptopofl_v2.py (tables, figures, numbers in the text).
+% Place the output folder next to this file (default name: results_v2).
+% -----------------------------------------------------------------------
+% results_v2/ may sit next to this file (Overleaf) or at the repository root (GitHub layout)
+\IfFileExists{results_v2/tables/results_macros.tex}{\newcommand{\resdir}{results_v2}}{\newcommand{\resdir}{../results_v2}}
+\IfFileExists{\resdir/tables/results_macros.tex}{\input{\resdir/tables/results_macros.tex}}{}
+\input{fallback_macros}   % defines "??" for any number not (yet) produced by the script
+\newcommand{\restable}[1]{\IfFileExists{\resdir/tables/#1.tex}%
+  {\input{\resdir/tables/#1.tex}}%
+  {\fbox{\parbox{0.8\linewidth}{\centering\small Table \texttt{#1} not found: run \texttt{ptopofl\_v2.py}.}}}}
+\newcommand{\resfig}[2]{\IfFileExists{\resdir/figures/#1.pdf}%
+  {\includegraphics[width=#2]{\resdir/figures/#1.pdf}}%
+  {\fbox{\parbox{0.8\linewidth}{\centering\small Figure \texttt{#1} not found: run \texttt{ptopofl\_v2.py}.}}}}
+% Code availability: keep the first definition when the code is uploaded as supplementary material;
+% if you create an Anonymous GitHub mirror instead, uncomment the second line and insert its ID.
+\newcommand{\codeavailability}{The code is provided as anonymised supplementary material and will be released publicly upon acceptance.}
+% \renewcommand{\codeavailability}{Anonymised code: \url{https://anonymous.4open.science/r/YOUR-ID}.}
+
+% -----------------------------------------------------------------------
+% TMLR metadata
+% -----------------------------------------------------------------------
+\def\month{MM}    % Insert correct month for camera-ready version
+\def\year{YYYY}   % Insert correct year for camera-ready version
+\def\openreview{\url{https://openreview.net/forum?id=XXXX}} % Insert correct OpenReview link
+
+\title{\ptopofl: Topology-Guided Personalised Federated Learning\\
+       with Persistent-Homology Client Descriptors}
+
+% Authors are hidden as long as the tmlr package is used without [accepted] or [preprint].
+\author{\name Kelly L Vomo-Donfack \email vomodonfack@math.univ-paris13.fr \\
+      \addr Universit\'e Sorbonne Paris Nord, LAGA, CNRS, UMR 7539,\\
+      Laboratoire d'excellence Infibrex, F-93430 Villetaneuse, France\\
+      Instituto de Hortofruticultura Subtropical y Mediterr\'anea La Mayora
+      (IHSM), Universidad de M\'alaga--Consejo Superior de Investigaciones
+      Cient\'ificas, M\'alaga, Spain
+      \AND
+      \name Adryel Hoszu \email adryel.hoszu@edu.univ-paris13.fr \\
+      \addr Universit\'e Sorbonne Paris Nord, LAGA, CNRS, UMR 7539,\\
+      Laboratoire d'excellence Infibrex, F-93430 Villetaneuse, France\\
+      Instituto de Hortofruticultura Subtropical y Mediterr\'anea La Mayora
+      (IHSM), Universidad de M\'alaga--Consejo Superior de Investigaciones
+      Cient\'ificas, M\'alaga, Spain
+      \AND
+      \name Gr\'egory Ginot \email ginot@math.univ-paris13.fr \\
+      \addr Universit\'e Sorbonne Paris Nord, LAGA, CNRS, UMR 7539,\\
+      Laboratoire d'excellence Infibrex, F-93430 Villetaneuse, France
+      \AND
+      \name Ian Morilla \email morilla@math.univ-paris13.fr \\
+      \addr Universit\'e Sorbonne Paris Nord, LAGA, CNRS, UMR 7539,\\
+      Laboratoire d'excellence Infibrex, F-93430 Villetaneuse, France\\
+      Instituto de Hortofruticultura Subtropical y Mediterr\'anea La Mayora
+      (IHSM), Universidad de M\'alaga--Consejo Superior de Investigaciones
+      Cient\'ificas, M\'alaga, Spain}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Clustered and personalised federated learning (FL) needs a signal that tells the server
+which clients should share a model. Most methods derive it from losses or model updates,
+which must be recomputed as training proceeds. We study \ptopofl, which derives it once,
+before training, from a compact persistent-homology (PH) descriptor of each client's
+feature distribution: the server clusters clients on these descriptors, weights them within
+clusters, and runs a blended clustered version of local gradient descent that returns one
+personalised model per cluster. We analyse this complete procedure---clustering, weighting
+and blending included---for strongly convex and smooth local losses. For any partition, one
+round is a contraction with factor $(1-\eta\mu)^{\tau}$, where $\eta$ is the step size and
+$\tau$ the number of local steps. We characterise its fixed point explicitly through a
+local-step drift bound, an exact formula for the effective strength of blending (which
+yields a calibration rule), and a stochastic floor that exposes a bias--variance trade-off
+of clustering. We also prove that personalisation lowers the heterogeneity floor in
+proportion to the share of the dispersion of client optima that the partition captures.
+This share is measurable, which replaces an unverifiable ``topology--gradient alignment''
+assumption by an empirical question. Experiments on controlled synthetic federations, a
+label-skew benchmark and a real four-hospital dataset confirm the theory and delimit the
+method. When feature geometry and decision rules co-vary, the PH partition recovers the
+latent client groups, including geometric differences that a linear-subspace descriptor
+misses, and \ptopofl\ is competitive with the strongest clustered baselines. When
+heterogeneity is invisible in feature geometry, it offers no advantage over FedAvg. On the real four-hospital federation, \ptopofl\ lowers
+FedAvg's test log-loss from $\ResHDFedavgLL$ to $\ResHDPtopoLL$, on par with the best
+personalised baselines. We
+also state what \ptopofl\ does not provide. It transmits model parameters, so it is no
+more private than FedAvg; we give a record-level $(\varepsilon,\delta)$ differential
+privacy accounting for everything a client transmits and show, with attack-based
+evaluations, that privatising the descriptor under its worst-case sensitivity destroys the
+partition. Code that regenerates every number in the paper is provided.
+\end{abstract}
+
+\input{topofederatedl}
+
+\bibliography{references}
+\bibliographystyle{tmlr}
+
+\end{document}

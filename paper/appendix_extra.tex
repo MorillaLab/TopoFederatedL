@@ -1,0 +1,176 @@
+% ==========================================================================
+\section{Algorithms and baselines}
+\label{app:baselines}
+% ==========================================================================
+All methods start from $\theta=0$ and use full-batch gradients, the step size
+$\eta=1/\max_kL_k$, $\tau=10$ local steps per round and $T=150$ rounds. They are
+evaluated as in Section~\ref{sec:exp_setup}. The baselines implement their published
+update rules.
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \textbf{FedAvg}: averaging with $p_k\propto n_k$; this is Algorithm~\ref{alg:ptopofl} with $M=1$ and $w_k=p_k$.
+  \item \textbf{FedProx}: local objective $F_k(\theta)+\frac{\mu}{2}\norm{\theta-\theta^t}^2$, $\mu=0.1$, step size $1/(L+\mu)$.
+  \item \textbf{SCAFFOLD}: option~II control variates, global step size $1$, full participation, weights $p_k$ \citep{karimireddy2020scaffold}.
+  \item \textbf{pFedMe} \citep{t2020personalized}: $\lambda=15$.
+    \begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+      \item Each of the $\tau$ local iterations approximately solves the proximal problem
+        $\min_\theta F_k(\theta)+\frac\lambda2\norm{\theta-w_k}^2$ with $10$ warm-started
+        gradient steps of size $1/(L+\lambda)$, then sets
+        $w_k\gets w_k-\tfrac12(w_k-\tilde\theta_k)$.
+      \item The server averages with $\beta=1$.
+      \item A client's personalised model is the proximal point of the final global model.
+    \end{itemize}
+  \item \textbf{Ditto} \citep{li2021ditto}: a FedAvg global model, plus personal models
+    updated with $\tau$ steps per round on $F_k(v)+\frac{\lambda}{2}\norm{v-w^t}^2$,
+    $\lambda=0.1$.
+  \item \textbf{IFCA} \citep{ghosh2020efficient}: $M=2$.
+    \begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+      \item The cluster models are initialised from two distinct, randomly chosen clients,
+        each trained locally for $20$ steps; identical initialisations would make every
+        client choose the same cluster.
+      \item In each round, every client selects the cluster model with the lowest training
+        loss; each cluster then averages its members' local models.
+    \end{itemize}
+  \item \textbf{PACFL-style}: each client sends the top-$3$ left singular vectors of its
+    (features $\times$ samples) training matrix \citep{vahidian2023efficient}. The
+    dissimilarity is the sum of the principal angles, and clustering uses average linkage
+    with $M=2$. Training is identical to \ptopofl, with $w_k\propto n_k$ and the same
+    calibrated $\alpha$, so the comparison isolates the descriptor.
+  \item \textbf{Robust aggregators}: unweighted coordinate-wise median and trimmed mean
+    (trimming fraction $0.2$) of the clients' local models \citep{yin2018byzantine}.
+  \item \textbf{References.} The random partition is a uniformly random permutation of the
+    \ptopofl\ labels, so cluster sizes are identical. The oracle partition is $k$-means
+    ($20$ restarts) on the exact local optima, computed by Newton's method. Both use the
+    \ptopofl\ training with $w_k\propto n_k$.
+\end{itemize}
+
+% ==========================================================================
+\section{Descriptor details, implementation check and cost}
+\label{app:cost}
+% ==========================================================================
+\paragraph{Layout.} Coordinates $0$--$19$ hold $\mathrm{BC}_0$, $20$--$39$ hold
+$\mathrm{BC}_1$, and coordinates $40$--$45$ hold $(N_0,N_1,E_0,E_1,A_0,A_1)$. Records with
+zero pairwise distance, which occur with discrete attributes, produce pairs of zero
+persistence; these are excluded from $N_j$, $E_j$, $A_j$ and the Betti curves. Constant
+coordinates are left unchanged by the min--max normalisation.
+
+\paragraph{Correctness of $H_1$.} The released code computes $H_1$ with Ripser when it is
+installed, and otherwise with a direct $\mathbb{Z}_2$ boundary-matrix reduction of the same
+truncated triangle filtration. On random point clouds the two give identical pairs, up to
+$6\cdot10^{-8}$ (single-precision rounding in Ripser).
+
+\paragraph{Cost.} With Ripser, one subsample of $80$ points in $\R^{20}$ takes about
+$\CostDescOne$\,s on one CPU core; the pure-NumPy $H_1$ reduction takes about
+$\CostHoneNumpy$\,s. The descriptor is computed once per client. Its cost is therefore
+negligible compared with training, even with $n_{\mathrm{rep}}=5$ subsamples.
+Table~\ref{tab:comm} gives the communication per round.
+
+\begin{table}[h]
+\centering\small
+\caption{Communication per client and per round (in floats); $p$ is the model dimension.}
+\label{tab:comm}
+\restable{tab_comm}
+\end{table}
+
+% ==========================================================================
+\section{Hyper-parameters}
+\label{app:hparams}
+% ==========================================================================
+\begin{table}[h]
+\centering\small
+\caption{Hyper-parameters, fixed before the experiments and shared by all federations.}
+\label{tab:hparams}
+\restable{tab_hparams}
+\end{table}
+\paragraph{Synthetic generators.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item Federation (A): $d=20$; the subspace dimension is $3$; the concept shift has unit
+    norm along a direction orthogonal to $\beta_0$; logits are rescaled to standard
+    deviation $3$.
+  \item Corrupted clients: the shift-plus-flips attack adds $\mathcal N(2,0.5^2)$ to $10$
+    coordinates and flips $40\%$ of the labels; the heavy-tailed attack adds Student-$t_2$
+    noise to all coordinates and flips $40\%$ of the labels.
+  \item Privacy experiment: $n_k\in[400,1200]$, rows rescaled to $\norm{\tilde x}\le C=\DPclip$,
+    no pooled standardisation (it would be an additional release), $T=40$, $\tau=5$ and
+    $\delta=10^{-5}$.
+\end{itemize}
+
+% ==========================================================================
+\section{Additional results}
+\label{app:extra}
+% ==========================================================================
+
+\begin{table}[h]
+\centering\small
+\caption{\textbf{Per-client view} (all federations). Shown are the fraction of honest
+clients whose personalised log-loss is worse than under FedAvg and under local training, and
+the loss of the worst client, all averaged over seeds.}
+\label{tab:perclient}
+\resizebox{\textwidth}{!}{\restable{tab_perclient}}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\caption{\textbf{Blending and local steps} (federation A, log-loss). Rows: number of local
+steps $\tau$, with the total number of local steps held equal. Columns: target effective
+blending $\bar\alpha$, with $\alpha$ set by Eq.~\eqref{eq:alphacal}. With calibration, the
+results depend on $\bar\alpha$ but hardly on $\tau$, as Proposition~\ref{prop:blend}(c)
+predicts.}
+\label{tab:alphatau}
+\restable{tab_alpha_tau}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\caption{\textbf{Sensitivity} of \ptopofl\ on federation (A): log-loss and recovery of the
+latent groups (ARI).}
+\label{tab:sensitivity}
+\restable{tab_sensitivity}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\caption{\textbf{Detection of corrupted clients} by trust weights (federation A, $K=10$).
+Each entry gives the fraction of corrupted clients flagged ($t_k<1$) and the fraction of
+honest clients flagged, for each fraction of corrupted clients.}
+\label{tab:detection}
+\restable{tab_detection}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\caption{\textbf{Privacy experiment} (Section~\ref{sec:e_privacy}): log-loss,
+membership-inference AUC, partition recovery and property-inference accuracy as functions
+of the record-level $\varepsilon$ ($\delta=10^{-5}$).}
+\label{tab:privacy}
+\resizebox{\textwidth}{!}{\restable{tab_privacy}}
+\end{table}
+
+\paragraph{Drift monitoring.}
+When client data change over time, descriptors can be recomputed periodically to monitor
+drift. In this experiment, $K=6$ clients receive fresh samples in each of $20$ rounds, and
+two of them drift progressively from isotropic to near-$3$-dimensional data. The statistic
+$\Delta_k=\frac1R\sum_r\norm{\hat\phi_k^{(r)}-\hat\phi_k^{(1)}}$ separates drifting from
+stable clients (AUC $\ContAUC$; flagging the top quartile gives TPR $\ContTPR$ and FPR
+$\ContFPR$; Figure~\ref{fig:continual}). With static data, descriptors are computed once,
+so no spurious drift arises.
+
+\begin{figure}[h]
+\centering
+\resfig{fig_continual}{0.8\textwidth}
+\caption{Entropy coordinates of the normalised descriptor over $20$ rounds. Dashed lines are
+the two drifting clients.}
+\label{fig:continual}
+\end{figure}
+
+% ==========================================================================
+\section{Reproducibility}
+\label{app:repro}
+% ==========================================================================
+All results are produced by one script, \texttt{ptopofl\_v2.py}, which depends only on
+NumPy, SciPy, scikit-learn and Matplotlib (Ripser is optional). Running
+\texttt{python ptopofl\_v2.py --exp all --seeds 10} executes every experiment with seeds
+$0$--$9$. The script writes the \LaTeX{} tables and the numerical macros used in the text,
+so that the text and the code cannot diverge. The real dataset is downloaded from the UCI
+repository, and the script prints the site sizes after preprocessing. On one CPU core the
+synthetic experiments take about $12$ minutes in total.
+\codeavailability

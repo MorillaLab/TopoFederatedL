@@ -1,0 +1,334 @@
+% ==========================================================================
+\section{Proofs}
+\label{app:proofs}
+% ==========================================================================
+
+Throughout, $\norm{\cdot}$ is the Euclidean norm and $\pinorm{\cdot}$ the weighted norm of
+Section~\ref{sec:theory}.
+
+\subsection{Auxiliary lemmas}
+
+\begin{lemma}[Gradient-step map]\label{lem:gd}
+Let $F$ be convex and $L$-smooth, and let $G=\Id-\eta\nabla F$.
+\begin{enumerate}[label=(\roman*),leftmargin=1.6em,itemsep=1pt]
+  \item If $F$ is also $\mu$-strongly convex and $0<\eta\le2/(\mu+L)$, then
+    $\norm{G(x)-G(y)}\le(1-\eta\mu)\norm{x-y}$ for all $x,y$.
+  \item If $0<\eta\le2/L$, then $\norm{\nabla F(G(x))}\le\norm{\nabla F(x)}$ for all $x$.
+  \item If $F$ is $\mu$-strongly convex with minimiser $x^\star$, then
+    $\norm{x-x^\star}\le\norm{\nabla F(x)}/\mu$.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+(i) Write $g_x=\nabla F(x)$. For $\mu$-strongly convex, $L$-smooth $F$ we have
+$\langle g_x-g_y,x-y\rangle\ge\frac{\mu L}{\mu+L}\norm{x-y}^2+\frac{1}{\mu+L}\norm{g_x-g_y}^2$
+\citep[Thm.~2.1.12]{nesterov2018lectures}. Therefore
+\[
+  \norm{G(x)-G(y)}^2\le\Bigl(1-\tfrac{2\eta\mu L}{\mu+L}\Bigr)\norm{x-y}^2+\eta\Bigl(\eta-\tfrac{2}{\mu+L}\Bigr)\norm{g_x-g_y}^2 .
+\]
+The last coefficient is non-positive, and $\norm{g_x-g_y}\ge\mu\norm{x-y}$ by strong
+convexity. Hence
+$\norm{G(x)-G(y)}^2\le\bigl(1-\frac{2\eta\mu L}{\mu+L}+\eta^2\mu^2-\frac{2\eta\mu^2}{\mu+L}\bigr)\norm{x-y}^2=(1-\eta\mu)^2\norm{x-y}^2$,
+and $1-\eta\mu\ge0$ because $\eta\le2/(\mu+L)\le1/\mu$.
+
+(ii) Let $y=G(x)=x-\eta g_x$. Co-coercivity
+\citep[Thm.~2.1.5]{nesterov2018lectures} gives
+$\langle g_x-g_y,\eta g_x\rangle\ge\frac1L\norm{g_x-g_y}^2$. Hence
+$\norm{g_y}^2=\norm{g_x}^2-2\langle g_x,g_x-g_y\rangle+\norm{g_x-g_y}^2\le\norm{g_x}^2-\bigl(\frac{2}{\eta L}-1\bigr)\norm{g_x-g_y}^2\le\norm{g_x}^2$.
+
+(iii) We have $\mu\norm{x-x^\star}^2\le\langle\nabla F(x)-\nabla F(x^\star),x-x^\star\rangle\le\norm{\nabla F(x)}\norm{x-x^\star}$.
+\end{proof}
+
+Under Assumption~\ref{ass:sc} and $\eta\le1/L\le2/(\mu+L)$, Lemma~\ref{lem:gd}(i) applied
+$\tau$ times shows that $T_k$ is $q$-Lipschitz, $q=(1-\eta\mu)^\tau$. Since
+$T_k(\theta_k^{\loc})=\theta_k^{\loc}$, this gives
+\begin{equation}
+  \norm{T_k(\theta)-\theta_k^{\loc}}\le q\,\norm{\theta-\theta_k^{\loc}}\qquad\forall\theta.
+  \label{eq:Tk_loc}
+\end{equation}
+
+\begin{lemma}[Blending]\label{lem:blend}
+Let $P=\mathbf{1}\pi^\top$, so that $(P\Theta)_j=\bar\theta=\sum_i\pi_i\theta_i$ for every
+$j$. Then:
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item $P$ is the orthogonal projector, for the inner product
+    $\langle\Theta,\Theta'\rangle_\pi=\sum_j\pi_j\langle\theta_j,\theta'_j\rangle$, onto
+    consensus configurations;
+  \item $B=P+(1-\alpha)(I-P)$;
+  \item $\pinorm{B\Theta}\le\pinorm{\Theta}$ for every $\Theta$.
+\end{itemize}
+\end{lemma}
+\begin{proof}
+$P^2=P$ because $\pi^\top\mathbf 1=1$. Moreover
+$\langle P\Theta,\Theta'\rangle_\pi=\langle\bar\theta,\bar\theta'\rangle=\langle\Theta,P\Theta'\rangle_\pi$,
+so $P$ is self-adjoint. The identity $B=P+(1-\alpha)(I-P)$ follows from the definitions.
+Finally,
+$\pinorm{B\Theta}^2=\pinorm{P\Theta}^2+(1-\alpha)^2\pinorm{(I-P)\Theta}^2\le\pinorm{\Theta}^2$.
+\end{proof}
+
+\begin{lemma}[Weighted variance decomposition]\label{lem:anova}
+For weights $a_k\ge0$ with $\sum_ka_k=1$, vectors $v_k$ with mean $\bar v=\sum_ka_kv_k$, and
+any vector $c$,
+\[
+  \sum_ka_k\norm{c-v_k}^2=\norm{c-\bar v}^2+\sum_ka_k\norm{v_k-\bar v}^2 .
+\]
+\end{lemma}
+\begin{proof}
+Expand $\norm{(c-\bar v)+(\bar v-v_k)}^2$ and use $\sum_ka_k(\bar v-v_k)=0$.
+\end{proof}
+
+\subsection{Proof of Theorem~\ref{thm:contraction}}
+For any $\Theta,\Theta'$, using that each $T_k$ is $q$-Lipschitz and that the weights in a
+cluster sum to one,
+\[
+  \pinorm{S(\Theta)-S(\Theta')}^2=\sum_j\pi_j\Bigl\|\sum_{k\in C_j}w_k\bigl(T_k(\theta_j)-T_k(\theta'_j)\bigr)\Bigr\|^2
+  \le\sum_j\pi_j\Bigl(\sum_{k\in C_j}w_k\,q\norm{\theta_j-\theta'_j}\Bigr)^2=q^2\pinorm{\Theta-\Theta'}^2 .
+\]
+By Lemma~\ref{lem:blend},
+$\pinorm{\Psi(\Theta)-\Psi(\Theta')}=\pinorm{B(S(\Theta)-S(\Theta'))}\le q\pinorm{\Theta-\Theta'}$.
+Since $q<1$, Banach's fixed-point theorem on the complete space
+$((\R^p)^M,\pinorm\cdot)$ gives existence and uniqueness of $\hat\Theta$. The rate follows
+from $\pinorm{\Theta^{t}-\hat\Theta}=\pinorm{\Psi(\Theta^{t-1})-\Psi(\hat\Theta)}\le q\pinorm{\Theta^{t-1}-\hat\Theta}$.
+\qed
+
+\subsection{Proof of Theorem~\ref{thm:drift}}
+Fix a cluster $j$ and write $S=S_j$, $\theta^\star=\theta^\star_j$, $\hat\theta=\hat\theta_j$;
+with $\alpha=0$, $\hat\theta=S(\hat\theta)$.
+
+\emph{First bound.} Since $S$ is $q$-Lipschitz,
+$\norm{\hat\theta-\theta^\star}\le\norm{S(\hat\theta)-S(\theta^\star)}+\norm{S(\theta^\star)-\theta^\star}\le q\norm{\hat\theta-\theta^\star}+\norm{S(\theta^\star)-\theta^\star}$,
+hence
+\begin{equation}
+  \norm{\hat\theta-\theta^\star}\le\frac{\norm{S(\theta^\star)-\theta^\star}}{1-q}.
+  \label{eq:drift1}
+\end{equation}
+For $k\in C_j$ let $x_k^0=\theta^\star$ and $x_k^{s+1}=x_k^s-\eta\nabla F_k(x_k^s)$, so that
+$T_k(\theta^\star)-\theta^\star=-\eta\sum_{s=0}^{\tau-1}\nabla F_k(x_k^s)$. Because
+$\sum_{k\in C_j}w_k\nabla F_k(\theta^\star)=\nabla G_j(\theta^\star)=0$,
+\[
+  S(\theta^\star)-\theta^\star=-\eta\sum_{s=0}^{\tau-1}\sum_{k\in C_j}w_k\bigl[\nabla F_k(x_k^s)-\nabla F_k(\theta^\star)\bigr].
+\]
+By $L$-smoothness and Lemma~\ref{lem:gd}(ii),
+\[
+  \norm{\nabla F_k(x_k^s)-\nabla F_k(\theta^\star)}\le L\norm{x_k^s-\theta^\star}
+  \le L\eta\sum_{r<s}\norm{\nabla F_k(x_k^r)}\le L\eta s\norm{\nabla F_k(\theta^\star)} .
+\]
+Summing over $s<\tau$ gives $\norm{S(\theta^\star)-\theta^\star}\le\frac12\eta^2L\tau(\tau-1)\zeta_j$.
+Next, $(1-x)^\tau\le e^{-\tau x}\le(1+\tau x)^{-1}$ for $x\in[0,1]$, so
+$1-q\ge\eta\mu\tau/(1+\eta\mu\tau)$. Substituting both estimates into~\eqref{eq:drift1}
+yields $\norm{\hat\theta-\theta^\star}\le\frac12\eta L(\tau-1)(1+\eta\mu\tau)\,\zeta_j/\mu$.
+
+\emph{Second bound.} Since $\sum_kw_k=1$,
+$\hat\theta-\theta^\star=\sum_{k}w_k\bigl(T_k(\hat\theta)-\theta_k^{\loc}\bigr)+\sum_kw_k(\theta^{\loc}_k-\theta^\star)$.
+By~\eqref{eq:Tk_loc} and Lemma~\ref{lem:gd}(iii) applied to $F_k$,
+$\norm{\theta_k^{\loc}-\theta^\star}\le\norm{\nabla F_k(\theta^\star)}/\mu$. Hence
+\[
+  \norm{\hat\theta-\theta^\star}\le q\sum_kw_k\bigl(\norm{\hat\theta-\theta^\star}+\norm{\theta^\star-\theta_k^{\loc}}\bigr)+\frac{\zeta_j}{\mu}
+  \le q\norm{\hat\theta-\theta^\star}+(1+q)\frac{\zeta_j}{\mu},
+\]
+which gives the second bound. For $\tau=1$ the first bound vanishes. If
+$\eta\mu\tau\le1$, then $(1+\eta\mu\tau)/2\le1$.
+\qed
+
+\subsection{Proof of Proposition~\ref{prop:blend}}
+\emph{(a)} Since $\hat\Theta_0=S(\hat\Theta_0)$ and $\hat\Theta_\alpha=BS(\hat\Theta_\alpha)$,
+\[
+  \hat\Theta_\alpha-\hat\Theta_0=B\bigl(S(\hat\Theta_\alpha)-S(\hat\Theta_0)\bigr)+(B-I)\hat\Theta_0 .
+\]
+By Lemma~\ref{lem:blend}, $(B-I)\hat\Theta_0=-\alpha(I-P)\hat\Theta_0$, whose norm is
+$\alpha D(\hat\Theta_0)$. Hence
+$\pinorm{\hat\Theta_\alpha-\hat\Theta_0}\le q\pinorm{\hat\Theta_\alpha-\hat\Theta_0}+\alpha D(\hat\Theta_0)$.
+
+\emph{(b)} Here $\nabla F_k(\theta)=H(\theta-\theta^{\loc}_k)$, so
+$T_k(\theta)=\theta_k^{\loc}+Q(\theta-\theta^{\loc}_k)$ and, with
+$\bar w_j=\sum_{k\in C_j}w_k\theta_k^{\loc}$, $S_j(\theta)=\bar w_j+Q(\theta-\bar w_j)$. Since
+$\nabla G_j(\theta)=H(\theta-\bar w_j)$, we get $\theta_j^\star=\bar w_j$; and since
+$I-Q\succ0$, $S_j$ has the unique fixed point $\bar w_j$, so $\hat\Theta_0=\Theta^\star$.
+
+For general $\alpha$, let $m=\sum_j\pi_j\hat\theta_j$. Applying $\pi^\top$ to
+$\hat\Theta=BS(\hat\Theta)$ and using $\pi^\top B=\pi^\top$ gives
+$m=\sum_j\pi_jS_j(\hat\theta_j)=\bar m+Q(m-\bar m)$, hence $m=\bar m$. Projecting on the
+disagreement subspace with Lemma~\ref{lem:blend},
+\[
+  \hat\theta_j-m=(1-\alpha)\bigl(S_j(\hat\theta_j)-m\bigr)=(1-\alpha)\bigl[(I-Q)(\bar w_j-\bar m)+Q(\hat\theta_j-m)\bigr],
+\]
+which is the stated formula; the inverse exists because $\norm{(1-\alpha)Q}<1$. In an
+eigendirection with eigenvalue $h$ the matrix acts as the scalar
+$(1-\alpha)(1-q_h)/(1-(1-\alpha)q_h)=1-\alpha_{\mathrm{eff}}(h)$. Finally,
+$\partial\alpha_{\mathrm{eff}}/\partial q_h=\alpha(1-\alpha)/(1-(1-\alpha)q_h)^2\ge0$, and
+$q_h\le q$ for $h\ge\mu$.
+
+\emph{(c)} Substituting~\eqref{eq:alphacal} into $\alpha/(1-(1-\alpha)q)$ gives exactly
+$\bar\alpha$; monotonicity in $q_h$ then gives the inequality.
+\qed
+
+\subsection{Proof of Proposition~\ref{prop:anova} and Corollary~\ref{cor:endtoend}}
+\emph{(i)} Apply Lemma~\ref{lem:anova} with weights $w_k$ inside each cluster and $c=\bar\theta^{\loc}$:
+$\sum_{k\in C_j}w_k\norm{\bar\theta^{\loc}-\theta_k^{\loc}}^2=\norm{\bar\theta^{\loc}-\bar\theta^{\loc}_j}^2+V_j$.
+Multiply by $\pi_j$ and sum over $j$.
+
+\emph{(ii)} This is Lemma~\ref{lem:anova} with weights $\omega_k$.
+
+\emph{(iii)} $G_j$ is $\mu$-strongly convex with $\nabla G_j(\theta_j^\star)=0$, and
+$\nabla F_k(\theta_k^{\loc})=0$. By Lemma~\ref{lem:gd}(iii), smoothness and Jensen,
+\[
+  \mu\norm{\bar\theta^{\loc}_j-\theta_j^\star}\le\Bigl\|\sum_{k\in C_j}w_k\bigl(\nabla F_k(\bar\theta^{\loc}_j)-\nabla F_k(\theta^{\loc}_k)\bigr)\Bigr\|
+  \le L\sum_{k\in C_j}w_k\norm{\bar\theta^{\loc}_j-\theta^{\loc}_k}\le L\sqrt{V_j}.
+\]
+Lemma~\ref{lem:anova} with $c=\theta_j^\star$ gives
+$\sum_{k\in C_j}w_k\norm{\theta_j^\star-\theta_k^{\loc}}^2=\norm{\theta_j^\star-\bar\theta_j^{\loc}}^2+V_j\le(1+\kappa^2)V_j$.
+Multiply by $\pi_j$ and sum.
+
+\emph{(iv)} Strong convexity and smoothness give
+$\frac\mu2\norm{\theta-\theta_k^{\loc}}^2\le F_k(\theta)-F_k^\star\le\frac L2\norm{\theta-\theta_k^{\loc}}^2$.
+Combine with (ii) and (iii). The cluster optima beat every single model if
+$\frac L2(1+\kappa^2)\Vin<\frac\mu2\Vtot$, that is, if $\rho(\calC)<1/(\kappa(1+\kappa^2))$.
+
+\emph{(v)} Here
+$F_k(\theta)-F_k^\star=\frac12(\theta-\theta_k^{\loc})^\top H(\theta-\theta_k^{\loc})$.
+Minimising $\sum_k\omega_k(\cdot)$ over $\theta$ gives $\theta=\bar\theta^{\loc}$ and the value
+$\frac12\tr(H\Sigma_{\mathrm{tot}})$, with
+$\Sigma_{\mathrm{tot}}=\sum_k\omega_k(\theta_k^{\loc}-\bar\theta^{\loc})(\theta_k^{\loc}-\bar\theta^{\loc})^\top$.
+Since $\theta_j^\star=\bar\theta^{\loc}_j$ by Proposition~\ref{prop:blend}(b), the cluster
+optima achieve $\frac12\tr(H\Sigma_{\mathrm{in}})$, with
+$\Sigma_{\mathrm{in}}=\sum_j\pi_j\sum_{k\in C_j}w_k(\theta_k^{\loc}-\bar\theta_j^{\loc})(\cdot)^\top$.
+The matrix version of (i), $\Sigma_{\mathrm{tot}}=\Sigma_{\mathrm{in}}+\Sigma_{\mathrm{bet}}$,
+concludes the proof.
+
+\emph{Corollary~\ref{cor:endtoend}.} For client $k$ in cluster $j$, write
+\[
+  \theta^t_j-\theta^{\loc}_k=(\theta^t_j-\hat\theta_{\alpha,j})+(\hat\theta_{\alpha,j}-\hat\theta_{0,j})+(\hat\theta_{0,j}-\theta^\star_j)+(\theta^\star_j-\theta^{\loc}_k),
+\]
+and use $\norm{a+b+c+d}^2\le4(\norm a^2+\norm b^2+\norm c^2+\norm d^2)$. For any
+cluster-level quantity $x_j$, $\sum_k\omega_k\norm{x_{c(k)}}^2=\sum_j\pi_j\norm{x_j}^2$. The
+four terms are then bounded as follows:
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item the first by Theorem~\ref{thm:contraction};
+  \item the second by Proposition~\ref{prop:blend}(a);
+  \item the third by Theorem~\ref{thm:drift}, together with
+    $\zeta_j\le L\sum_{k\in C_j}w_k\norm{\theta_j^\star-\theta_k^{\loc}}\le L\sqrt{(1+\kappa^2)V_j}$
+    (from (iii)), so that $\sum_j\pi_j\norm{\hat\theta_{0,j}-\theta_j^\star}^2\le c(\eta,\tau)^2\kappa^2(1+\kappa^2)\Vin$;
+  \item the fourth by (iii).
+\end{itemize}
+\qed
+
+\subsection{Proof of Theorem~\ref{thm:stochastic}}
+Let $\mathcal F_t$ be the history up to the start of round $t$. Write $T_k^\xi$ for the noisy
+local map, $D_t=\Theta^t-\hat\Theta$, and $E_t=S^\xi(\Theta^t)-S(\Theta^t)$. Then
+$D_{t+1}=A_t+BE_t$ with $A_t=B(S(\Theta^t)-S(\hat\Theta))$, which is
+$\mathcal F_t$-measurable and satisfies $\pinorm{A_t}\le q\pinorm{D_t}$.
+
+\emph{Coupling.} Run the noisy and noiseless local trajectories $x_s,y_s$ of client $k$ from
+the same starting point, and let $d_s=x_s-y_s$. Then $d_{s+1}=G(x_s)-G(y_s)-\eta\xi_s$, and
+the cross term vanishes because $\E[\xi_s\mid x_s]=0$. Lemma~\ref{lem:gd}(i) therefore gives
+$\E\norm{d_{s+1}}^2\le(1-\eta\mu)^2\E\norm{d_s}^2+\eta^2\sigma^2$, hence
+$\E\norm{e_k}^2\le\eta^2\sigma^2m_\tau$ for $e_k=T_k^\xi(\theta)-T_k(\theta)$.
+
+\emph{Bias.} Taylor's theorem with an $M_H$-Lipschitz Hessian gives
+$d_{s+1}=(I-\eta\nabla^2F(y_s))d_s-\eta r_s-\eta\xi_s$ with
+$\norm{r_s}\le\frac{M_H}{2}\norm{d_s}^2$. Since $0\preceq I-\eta\nabla^2F\preceq(1-\eta\mu)I$,
+\[
+  \norm{\E d_{s+1}}\le(1-\eta\mu)\norm{\E d_s}+\tfrac{\eta M_H}{2}\E\norm{d_s}^2\le(1-\eta\mu)\norm{\E d_s}+\tfrac{\eta^3M_H\sigma^2s}{2},
+\]
+so that $\norm{\E[e_k\mid\mathcal F_t]}\le\frac14M_H\eta^3\sigma^2\tau^2=:\bar\beta$. For
+quadratics $r_s=0$, hence $\bar\beta=0$.
+
+\emph{One round.} The local noises are independent across clients. Hence, by
+Lemma~\ref{lem:blend},
+\[
+  \E\pinorm{BE_t}^2\le\E\pinorm{E_t}^2\le\sum_j\pi_j\Bigl[\sum_{k\in C_j}w_k^2\,\E\norm{e_k}^2+\bar\beta^2\Bigr]\le W_\pi\eta^2\sigma^2m_\tau+\bar\beta^2,
+\]
+and $|\E\langle A_t,BE_t\rangle_\pi|\le q\,\E\pinorm{D_t}\,\bar\beta$. With
+$2ab\le\varepsilon a^2+b^2/\varepsilon$ and $\varepsilon=(1-q^2)/(2q^2)$,
+\[
+  \E\pinorm{D_{t+1}}^2\le\tfrac{1+q^2}{2}\,\E\pinorm{D_t}^2+W_\pi\eta^2\sigma^2m_\tau+\bar\beta^2\,\tfrac{1+q^2}{1-q^2}.
+\]
+Unrolling this recursion gives the claim. For quadratics the cross term is zero, which gives
+the rate $q^2$. The leading term is bounded using
+$m_\tau\le\tau$ and $1-q^2\ge1-q\ge\eta\mu\tau/(1+\eta\mu\tau)$.
+\qed
+
+\subsection{Proof of Theorem~\ref{thm:partition} and Corollary~\ref{cor:gauss}}
+\label{app:proof_partition}
+\emph{Theorem~\ref{thm:partition}.} Let
+$d_{\mathrm{in}}=\max_j\max_{k,l\in C_j}\norm{v_k-v_l}$ and
+$d_{\mathrm{out}}=d_{\mathrm{in}}+\gamma(\calC)$. For each of the three linkages, the linkage
+between two disjoint sets $U,V$ lies in
+$[\min_{u\in U,v\in V}\norm{u-v},\ \max_{u\in U,v\in V}\norm{u-v}]$.
+
+We show by induction that, until $|\calC|$ clusters remain, every current cluster is
+contained in some $C_j$. This holds initially, when every cluster is a singleton. While more
+than $|\calC|$ clusters remain, by the pigeonhole principle some $C_j$ contains two current
+clusters, whose linkage is at most $d_{\mathrm{in}}$. Every pair of current clusters lying
+in different $C_j$'s has linkage at least $d_{\mathrm{out}}>d_{\mathrm{in}}$. The merge of
+minimal linkage therefore joins two subsets of the same $C_j$, which preserves the
+invariant. When $|\calC|$ clusters remain, each is contained in some $C_j$ and they cover
+$[K]$, so they are exactly the $C_j$.
+
+Under perturbation, every pairwise distance changes by at most $2\nu$, so the perturbed
+margin is at least $\gamma(\calC)-4\nu>0$, and the first part applies.
+
+\emph{Corollary~\ref{cor:gauss}.} The norm is $1$-Lipschitz and
+$\E\norm{\xi_k}\le\sigma_\phi\sqrt m$, so Gaussian concentration
+\citep{boucheron2013concentration} gives
+$\Pr\bigl(\norm{\xi_k}\ge\sigma_\phi(\sqrt m+s)\bigr)\le e^{-s^2/2}$. Take
+$s=\sqrt{2\log(K/\beta)}$ and a union bound over the $K$ clients.
+\qed
+
+\subsection{A counterexample for average-linkage margins}
+\label{app:counterexample}
+Take four points on a line, $v=(0,\,10,\,20.01,\,30.01)$, with $\calC=\{\{1,2\},\{3,4\}\}$.
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item The within-cluster average linkage, including the diagonal as in the earlier
+    version, is $5$, and the between-cluster average linkage is $20.01$. The ``average
+    margin'' is therefore $15.01$, far larger than $4\nu=0.04$ for $\nu=0.01$.
+  \item Unperturbed, average linkage returns $\calC$.
+  \item Moving point $2$ by $+0.01$ and point $3$ by $-0.01$ makes the pair $\{2,3\}$ the
+    closest one ($9.99<10.01$). The cut at two clusters becomes $\{\{1,2,3\},\{4\}\}$.
+\end{itemize}
+The strict margin $\gamma(\calC)$ of Theorem~\ref{thm:partition} is $0.01-10<0$ here,
+correctly signalling instability.
+
+\subsection{Proof of Propositions~\ref{prop:trust} and~\ref{prop:cap}}
+\emph{Proposition~\ref{prop:trust}.} Write $r_k=\norm{\hat\phi_k-\bar\phi_C}$. The weight of
+$A_C$ is $a/(a+h)$ with $a=\sum_{k\in A_C}n_ke^{-r_k}t_k$ and $h=\sum_{l\in H_C}n_le^{-r_l}$.
+This expression increases in $a$ and decreases in $h$. Moreover
+$a\le|A_C|\max_{A_C}n\,e^{-\min_{A_C}r}e^{-\Delta}$ and
+$h\ge|H_C|\min_{H_C}n\,e^{-\max_{H_C}r}$. Substituting gives the bound, since
+$|A_C|/|H_C|=\epsilon/(1-\epsilon)$. The bound $\Gamma\le\frac{\max n}{\min n}e^2$ holds
+because $\norm{\hat\phi_k-\bar\phi_C}\le\norm{\hat\phi_k}+\norm{\bar\phi_C}\le2$. The two
+threshold statements follow by solving $x/((1-\epsilon)+x)<\epsilon$ and
+$x/((1-\epsilon)+x)\le\epsilon^2$ for $x=\epsilon\Gamma e^{-\Delta}$, which give
+$\Gamma e^{-\Delta}<1$ and $\Gamma e^{-\Delta}\le\epsilon/(1+\epsilon)$ respectively.
+
+\emph{Proposition~\ref{prop:cap}.} The scores satisfy $\sum_kz_k=0$ and $\sum_kz_k^2=K$. Let
+$s=\sum_{k\in A}z_k$, so that $\sum_{k\notin A}z_k=-s$. By Cauchy--Schwarz,
+\[
+  K\ge\frac{s^2}{|A|}+\frac{s^2}{K-|A|}=\frac{s^2K}{|A|(K-|A|)},
+\]
+hence $s/|A|\le\sqrt{(K-|A|)/|A|}=\sqrt{(1-\epsilon)/\epsilon}$. If $z_k\ge1+\Delta$ on all
+of $A$, then $1+\Delta\le s/|A|$.
+\qed
+
+\subsection{Proof of Proposition~\ref{prop:dp}}
+\label{app:proof_dp}
+Under replace-one adjacency, the sum of per-record gradients changes by at most $2C$ in
+$\ell_2$ norm. Each noisy step therefore releases a Gaussian mechanism whose ratio of
+sensitivity to noise standard deviation is $2C/(2C\sigma_{\mathrm{DP}})=1/\sigma_{\mathrm{DP}}$.
+Its R\'enyi DP of order $a>1$ is $a/(2\sigma_{\mathrm{DP}}^2)$ \citep{mironov2017renyi}.
+The descriptor lies on the unit sphere, so its sensitivity is at most $2$, and its release
+has R\'enyi DP $a\cdot4/(2\sigma_\phi^2)$.
+
+R\'enyi DP composes additively, also adaptively: the starting points of local steps depend
+on earlier releases, including those of other clients, which are independent of client
+$k$'s data. Over the $T\tau$ steps and the single descriptor release, the total is $aR$ with
+$R=T\tau/(2\sigma_{\mathrm{DP}}^2)+2/\sigma_\phi^2$. Converting to $(\varepsilon,\delta)$-DP
+\citep[Prop.~3]{mironov2017renyi} gives $\varepsilon=\min_{a>1}\{aR+\log(1/\delta)/(a-1)\}$.
+The minimum is attained at $a=1+\sqrt{\log(1/\delta)/R}$, where it equals
+$R+2\sqrt{R\log(1/\delta)}$.
+
+The transmitted models are deterministic functions of the noisy gradients, the starting
+points and $n_k$, which is treated as public. The server's outputs and other clients' views
+are post-processing. Features must be pre-processed by a record-wise map, such as the norm
+rescaling used here, or standardised with public constants; pooled standardisation
+statistics would be an additional release.
+\qed

@@ -1,29 +1,24 @@
-.PHONY: install lint test simulate clean help
+.PHONY: help install test quick all paper clean
 
 help:
-	@echo "TopoFederatedL — available commands:"
-	@echo "  make install    Install all dependencies"
-	@echo "  make lint       Lint Python source"
-	@echo "  make test       Run unit tests"
-	@echo "  make simulate   Run FL simulation demo"
-	@echo "  make clean      Remove cache files"
+	@echo "make install | test | quick | all | paper | clean"
 
 install:
-	pip install -r requirements.txt
-
-lint:
-	flake8 . --max-line-length=127 --exclude=.git,__pycache__ --count --statistics
+	pip install -r requirements.txt pytest
 
 test:
-	pytest tests/ -v --tb=short 2>/dev/null || echo "No tests yet — skipping"
-	continue-on-error: true
+	pytest -q tests
 
-simulate:
-	python -c "print('TopoFederatedL simulation — add your script here')"
+quick:
+	python ptopofl_v2.py --exp all --quick --no-heart --out results_quick
+
+all:
+	python ptopofl_v2.py --exp all --seeds 10 --out results_v2
+
+paper:
+	cd paper && latexmk -pdf ptopofl.tex
 
 clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; true
-	find . -name "*.pyc" -delete 2>/dev/null; true
-	find . -name ".DS_Store" -delete 2>/dev/null; true
-	find . -name "*_executed.ipynb" -delete 2>/dev/null; true
-	find . -name ".ipynb_checkpoints" -exec rm -rf {} + 2>/dev/null; true
+	rm -rf results_quick results_ci .pytest_cache
+	find . -name "__pycache__" -type d -prune -exec rm -rf {} +
+	cd paper && latexmk -C ptopofl.tex 2>/dev/null || true

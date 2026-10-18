@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "pTopoFL: Topology-Guided Personalised Federated Learning with Persistent-Homology Client Descriptors"
+version: 2.0.0
+license: GPL-3.0
+repository-code: "https://github.com/MorillaLab/TopoFederatedL"
+authors:
+  - family-names: Vomo-Donfack
+    given-names: Kelly L.
+    affiliation: "Université Sorbonne Paris Nord"
+  - family-names: Hoszu
+    given-names: Adryel
+    affiliation: "Université Sorbonne Paris Nord"
+  - family-names: Ginot
+    given-names: Grégory
+    affiliation: "Université Sorbonne Paris Nord"
+  - family-names: Morilla
+    given-names: Ian
+    affiliation: "Université Sorbonne Paris Nord"
+preferred-citation:
+  type: article
+  title: "pTopoFL: Topology-Guided Personalised Federated Learning with Persistent-Homology Client Descriptors"
+  authors:
+    - family-names: Vomo-Donfack
+      given-names: Kelly L.
+    - family-names: Hoszu
+      given-names: Adryel
+    - family-names: Ginot
+      given-names: Grégory
+    - family-names: Morilla
+      given-names: Ian
+  journal: "arXiv preprint arXiv:2603.04323"
+  year: 2026

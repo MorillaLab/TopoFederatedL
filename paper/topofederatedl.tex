@@ -1,0 +1,1219 @@
+% ==========================================================================
+%  topofederatedl.tex --- body of the pTopoFL paper (input from ptopofl.tex)
+%  All numbers in the text are macros written by ptopofl_v2.py.
+% ==========================================================================
+
+% --------------------------------------------------------------------------
+\section{Introduction}
+\label{sec:intro}
+% --------------------------------------------------------------------------
+
+Federated learning (FL) \citep{mcmahan2017communication,kairouz2021advances} trains models
+over $K$ clients holding private datasets $\calD_k$ without centralising the data, typically
+by solving
+\begin{equation}
+  \min_{\theta\in\R^p} F(\theta):=\sum_{k=1}^K p_k F_k(\theta),
+  \qquad F_k(\theta):=\frac{1}{n_k}\sum_{(x,y)\in\calD_k}\ell(\theta;x,y),
+  \qquad p_k=\frac{n_k}{\sum_j n_j}.
+  \label{eq:global_obj}
+\end{equation}
+When client distributions differ, a single model can fit every client poorly. A natural
+remedy is to let \emph{groups} of similar clients share a model, as in clustered and
+personalised FL \citep{ghosh2020efficient,sattler2020clustered,long2023multi,t2020personalized,li2021ditto}.
+Clustered methods need a similarity signal. Most derive it from the optimisation itself:
+the losses of candidate models \citep[IFCA;][]{ghosh2020efficient}, the geometry of
+updates \citep[CFL;][]{sattler2020clustered,briggs2020federated}, or distances between local
+models \citep[FeSEM;][]{long2023multi}. Such signals are entangled with the current model
+and must be recomputed during training. A second line of work uses a \emph{one-shot}
+summary of each client's data, such as local $k$-means centroids
+\citep{dennis2021heterogeneity} or the principal subspace of the local data matrix
+\citep[PACFL;][]{vahidian2023efficient}.
+
+This paper studies a third kind of summary: persistent homology (PH). In \ptopofl, each
+client computes once a $46$-dimensional descriptor of the multiscale shape of its feature
+cloud (Betti curves, persistence entropy and amplitude in homological degrees $0$ and $1$).
+The server clusters clients on these descriptors, weights them within clusters, and then
+runs a blended, clustered version of local gradient descent that broadcasts one
+personalised model per cluster. Because the descriptor is computed after a per-coordinate
+min--max normalisation, it ignores location and scale and responds to properties of shape
+that first- and second-moment summaries miss, such as intrinsic dimension and tail
+behaviour (Section~\ref{sec:e_alignment}). Whether such a geometric signal helps a learning
+task depends on whether clients that look alike in feature space also prefer similar
+models. The earlier version of this work assumed this ``topology--gradient alignment''; here
+we make the dependence explicit and \emph{measurable} instead.
+
+\paragraph{Why persistent homology.}
+PH summarises a point cloud by the scales at which connected components and loops appear and
+disappear. In centralised machine learning it has been used for graph classification
+\citep{hofer2017deep}, time series \citep{umeda2017time}, decision-boundary regularisation
+\citep{chen2019topological} and medical imaging \citep{clough2020topological,abaach2023geotop,gouiaa2024taelcore};
+there, persistence diagrams are turned into fixed-length inputs by vectorisations such as
+Betti curves, persistence entropy, landscapes, silhouettes or persistence images
+\citep{giusti2015clique,chintakunta2015entropy,chazal2021introduction,bubenik2015statistical,chazal2014stochastic,adams2017persistence,reininghaus2015stable}.
+Our descriptor is one such vectorisation, chosen for its low dimension and low cost; we
+compare clients with Euclidean distances between descriptor vectors and do \emph{not} use
+the Wasserstein geometry of the space of diagrams \citep{mileyko2011probability,turner2014frechet}.
+Landscapes or images could replace it without changing any result of
+Section~\ref{sec:theory}, which hold for \emph{any} partition and weights.
+
+\paragraph{Scope with respect to privacy.}
+\ptopofl\ transmits model parameters $\theta_k$ in every round, exactly like FedAvg. Every
+attack that applies to FedAvg messages therefore applies to \ptopofl; in particular, the
+difference of two consecutive models of a client reveals its update. \ptopofl\ is not a
+privacy mechanism, and its descriptor is an \emph{additional} release. What we do provide is
+(i) a protocol in which the server touches models only through per-cluster weighted sums,
+so that secure aggregation applies, and (ii) a record-level $(\varepsilon,\delta)$
+differential-privacy accounting for \emph{everything} a client transmits, together with its
+utility cost and attack-based evaluations (Sections~\ref{sec:comm} and~\ref{sec:e_privacy}).
+
+\paragraph{Contributions.}
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+  \item \textbf{A precisely specified method} (Algorithm~\ref{alg:ptopofl},
+    Figure~\ref{fig:framework}), with every transmitted object stated.
+  \item \textbf{A convergence theory for the algorithm that is actually run}
+    (Section~\ref{sec:theory}; complete proofs in Appendix~\ref{app:proofs}).
+    \begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+      \item For every partition, weighting and blending coefficient, one round is a
+        $(1-\eta\mu)^{\tau}$-contraction (Theorem~\ref{thm:contraction}).
+      \item The fixed point is characterised by a local-step drift bound
+        (Theorem~\ref{thm:drift}) and by an exact formula for the effective strength of
+        blending, which yields a calibration rule (Proposition~\ref{prop:blend}).
+      \item Personalisation provably lowers the heterogeneity floor in proportion to a
+        measurable share $1-\rho(\calC)$ of the dispersion of client optima
+        (Proposition~\ref{prop:anova}, Corollary~\ref{cor:endtoend}).
+      \item With stochastic local steps there is a bias--variance trade-off of clustering
+        (Theorem~\ref{thm:stochastic}).
+      \item We also give a correct partition-stability result (Theorem~\ref{thm:partition})
+        and bounds on trust weights (Propositions~\ref{prop:trust} and~\ref{prop:cap}).
+    \end{itemize}
+    No assumption linking topology to gradients is needed: topology enters only through
+    the partition, whose quality we measure.
+  \item \textbf{Experiments that test the theory and delimit the method}
+    (Section~\ref{sec:experiments}).
+    \begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+      \item Settings: synthetic federations with controlled alignment between geometry and
+        decision rules, a label-skew benchmark, and a real four-hospital dataset
+        \citep{detrano1989international,terrail2022flamby}.
+      \item Comparisons: eight baselines, including a subspace-descriptor method in the
+        spirit of PACFL, plus random and oracle partitions.
+      \item Additional studies: corrupted clients, and a differential-privacy sweep with
+        membership- and property-inference attacks.
+    \end{itemize}
+  \item \textbf{An explicit account of limitations}: what the descriptor sees and does not
+    see, the weakness of descriptor-based anomaly detection, and the privacy cost of
+    privatising the descriptor.
+\end{enumerate}
+
+% --------------------------------------------------------------------------
+\section{Background}
+\label{sec:background}
+% --------------------------------------------------------------------------
+
+\subsection{Federated optimisation under heterogeneity}
+\label{sec:bg_fl}
+In FedAvg \citep{mcmahan2017communication} the server broadcasts a model, each client
+performs $\tau$ local (stochastic) gradient steps on $F_k$, and the server averages the
+results with weights $p_k$. With identical client distributions local steps are
+essentially free \citep{stich2019local,woodworth2020minibatch}. Under heterogeneity,
+however, the iteration converges (with constant step size) to a fixed point that differs from
+the minimiser of~\eqref{eq:global_obj}: local steps introduce a \emph{drift}
+\citep{zhao2018federated,malinovsky2020local,charles2021convergence,pathak2020fedsplit}.
+Analyses of local SGD quantify this drift through a heterogeneity constant at the optimum,
+such as $\zeta^2=\sum_k p_k\norm{\nabla F_k(\theta^\star)}^2$
+\citep{khaled2020tighter,koloskova2020unified,woodworth2020minibatch}. Proximal terms
+\citep[FedProx;][]{li2020federated} and control variates
+\citep[SCAFFOLD;][]{karimireddy2020scaffold} reduce the drift of a single model.
+Personalised methods
+\citep[pFedMe, Ditto, APFL;][]{t2020personalized,li2021ditto,deng2020adaptive,hanzely2020federated}
+and clustered methods \citep{ghosh2020efficient,sattler2020clustered,long2023multi} instead
+change the target, so that different clients may use different models. Our analysis
+(Section~\ref{sec:theory}) adopts the fixed-point viewpoint of
+\citet{malinovsky2020local} and \citet{charles2021convergence} and extends it to clustered,
+weighted and blended aggregation.
+
+\subsection{Persistent homology}
+\label{sec:bg_ph}
+For a finite point cloud $X\subset\R^d$, the Vietoris--Rips filtration contains, at scale
+$\epsilon$, every simplex whose vertices are pairwise within distance $\epsilon$. Each
+homological feature (a connected component in $H_0$, a loop in $H_1$) has a birth scale $b$
+and a death scale $d$; the multiset of pairs $(b,d)$ is the persistence diagram
+$\mathrm{Dgm}_j(X)$ \citep{edelsbrunner2010computational}. Diagrams endowed with the
+bottleneck or $p$-Wasserstein distances form metric spaces
+\citep{mileyko2011probability,turner2014frechet}, and Rips diagrams are stable: with the
+diameter convention above,
+\begin{equation}
+  d_B\bigl(\mathrm{Dgm}_j(X),\mathrm{Dgm}_j(Y)\bigr)\le 2\,d_{\mathrm{GH}}(X,Y)\le 2\,d_H(X,Y)
+  \label{eq:stability}
+\end{equation}
+\citep{chazal2009gromov,chazal2014persistence}. We stress a limitation that matters below:
+\eqref{eq:stability} holds at the level of diagrams. It does not transfer to many standard
+vectorisations, because counts and Betti curves evaluated at fixed thresholds are
+discontinuous functions of the data, and persistence entropy is not uniformly Lipschitz
+\citep{atienza2020stability}. For this reason all our statements about the partition are
+expressed in terms of the computed descriptor vectors, never in terms of perturbations of
+the data.
+
+\subsection{Privacy in FL}
+\label{sec:bg_privacy}
+Shared gradients and model updates can be inverted to reconstruct training data
+\citep{zhu2019deep,geiping2020inverting}, and models leak membership \citep{yeom2018privacy}
+and distributional properties of the training data \citep{melis2019exploiting}.
+Differential privacy (DP) \citep{dwork2014algorithmic} bounds such leakage for every
+adversary; DP-SGD \citep{abadi2016deep,wei2020federated} achieves it by clipping and
+noising gradients. Secure aggregation \citep[SecAgg;][]{bonawitz2017practical} hides
+individual updates from the server but reveals their sum. For topological summaries, the
+sensitivity of \v{C}ech persistence diagrams to a single record does not decrease with the
+sample size, which makes record-level DP for standard PH summaries costly \citep{kang2024differentially}; our
+experiments confirm this for the descriptor used here (Section~\ref{sec:e_privacy}).
+
+% --------------------------------------------------------------------------
+\section{The \ptopofl\ framework}
+\label{sec:framework}
+% --------------------------------------------------------------------------
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\small, >={Stealth[length=2mm]},
+  cl/.style={draw=blue!60!black, rounded corners=2pt, fill=blue!5, minimum width=2.25cm,
+             minimum height=1.0cm, align=center},
+  sv/.style={draw=orange!70!black, rounded corners=2pt, fill=orange!8, minimum width=5.3cm,
+             minimum height=0.95cm, align=center},
+  lab/.style={font=\footnotesize, fill=white, inner sep=1pt}]
+  \node[cl] (c1) at (0,2.3)  {Client $1$\\[-1pt]\footnotesize local data $\calD_1$};
+  \node[cl] (c2) at (0,0.65) {Client $2$\\[-1pt]\footnotesize local data $\calD_2$};
+  \node     (cd) at (0,-0.35) {$\vdots$};
+  \node[cl] (cK) at (0,-1.35) {Client $K$\\[-1pt]\footnotesize local data $\calD_K$};
+  \node[sv] (s0) at (8.0,2.55) {\textbf{Round 0 (once):} partition $\calC$, trust $t_k$,\\
+                               weights $w_k$, cluster masses $\pi_j$};
+  \node[sv] (s1) at (8.0,0.85) {\textbf{Every round:} per-cluster sums\\
+                               $u_j=\sum_{k\in C_j}w_k\theta_k^{t+1}$ \;(SecAgg-compatible)};
+  \node[sv] (s2) at (8.0,-0.85) {\textbf{Blending:} $\theta_j^{t+1}=(1-\alpha)\,u_j+\alpha\sum_i\pi_i u_i$};
+  \begin{scope}[on background layer]
+    \node[draw=orange!70!black, dashed, rounded corners=3pt, fit=(s0)(s1)(s2), inner sep=5pt,
+          label={[font=\small\bfseries]above:Server}] {};
+  \end{scope}
+  \draw[->, thick, green!45!black] (c1.east) -- node[lab, pos=0.42]{$\phi_1\in\R^{46}$ (once)} (s0.west);
+  \draw[->, thick, blue!70!black]  ([yshift=-3pt]c1.south east) -- node[lab, pos=0.38]{$\theta_1^{t+1}$ ($p$ floats)} (s1.west);
+  \draw[->, thick, blue!70!black, dashed] (s2.west) -- node[lab, pos=0.62]{$\theta_{c(1)}^{t+1}$} ([yshift=3pt]c1.south east);
+  \draw[->, thick, green!45!black] (cK.east) -- (s0.south west);
+  \draw[->, thick, blue!70!black]  ([yshift=6pt]cK.east) -- (s1.south west);
+  \draw[->, thick, blue!70!black, dashed] (s2.south west) -- node[lab, pos=0.55]{$\theta_{c(K)}^{t+1}$} (cK.south east);
+  \draw[->] (s0) -- (s1);
+  \draw[->] (s1) -- (s2);
+\end{tikzpicture}
+\caption{\textbf{\ptopofl\ protocol.} Every client sends two kinds of message. Green: the
+descriptor $\phi_k$, sent \emph{once}, before training. Solid blue: its updated local model
+$\theta_k^{t+1}\in\R^p$, sent in every round. Dashed blue: the server returns to client $k$
+the personalised model of its cluster, $\theta_{c(k)}^{t+1}$. The server uses descriptors
+only to build the partition and the weights, and uses models only through the per-cluster
+weighted sums $u_j$. Arrows are drawn for clients $1$ and $K$; all clients behave alike.}
+\label{fig:framework}
+\end{figure}
+
+\paragraph{Protocol and threat model.}
+Training has two phases (Figure~\ref{fig:framework}, Algorithm~\ref{alg:ptopofl}).
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{Descriptor phase (round $0$, once).} Each client computes and sends a
+    descriptor $\phi_k$ (Section~\ref{sec:descriptor}). The server computes a partition
+    $\calC=\{C_1,\dots,C_M\}$, trust scores $t_k$, within-cluster weights $w_k$ and cluster
+    masses $\pi_j$ (Section~\ref{sec:structure}). It then tells each client its cluster
+    index $c(k)$.
+  \item \emph{Training rounds} ($t=0,\dots,T-1$). The server holds one model per cluster,
+    $\Theta^t=(\theta_1^t,\dots,\theta_M^t)$. Client $k$ receives $\theta^t_{c(k)}$, runs
+    $\tau$ local gradient steps on $F_k$, and returns $\theta_k^{t+1}$. The server
+    aggregates within clusters and blends across clusters (Section~\ref{sec:training}).
+\end{itemize}
+We consider an honest-but-curious server and passive eavesdroppers, which observe all
+messages, and clients that follow the protocol. Some clients may hold corrupted data
+(Section~\ref{sec:theory_trust}). Descriptors are self-reported, so a client that deviates
+adaptively from the protocol can forge an honest-looking $\phi_k$. Defending against such
+Byzantine clients is outside our scope.
+
+% --------------------------------------------------------------------------
+\subsection{Topological client descriptor}
+\label{sec:descriptor}
+
+Client $k$ draws $n_{\mathrm{rep}}=5$ subsamples of $n_{\mathrm{sub}}=80$ feature vectors
+from its (standardised) training features, using a client-specific seed. It min--max
+normalises each coordinate within the subsample and computes Vietoris--Rips persistence: $H_0$
+exactly, by Kruskal's algorithm, and $H_1$ with Ripser \citep{ripser} on the filtration
+truncated at the $95$th percentile of pairwise distances. From each diagram
+$\mathrm{Dgm}_j$, $j\in\{0,1\}$, it extracts four summaries:
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item the Betti curve $\mathrm{BC}_j\in\R^{L}$: the number of features alive at $L=20$
+    thresholds, linearly spaced between $0$ and the $95$th percentile of finite death
+    values \citep{giusti2015clique,chazal2021introduction};
+  \item the number $N_j$ of finite pairs with positive persistence;
+  \item the persistence entropy \citep{chintakunta2015entropy} $E_j=-\sum_i r_i\log r_i$, where
+    $r_i=\mathrm{pers}_i/\sum_l\mathrm{pers}_l$;
+  \item the amplitude $A_j=(\sum_i\mathrm{pers}_i^2)^{1/2}$.
+\end{itemize}
+The descriptor is the average over the $n_{\mathrm{rep}}$ subsamples of
+\begin{equation}
+  \bigl[\mathrm{BC}_0,\ \mathrm{BC}_1,\ N_0,\ N_1,\ E_0,\ E_1,\ A_0,\ A_1\bigr]\in\R^{2L+6}=\R^{46},
+  \label{eq:descriptor}
+\end{equation}
+and the server works with $\hat\phi_k=\phi_k/\norm{\phi_k}$. (An earlier version of the
+implementation stored $N_j$ twice, under two names; the duplicate is removed.)
+
+\paragraph{Properties.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{Invariances.} The descriptor is invariant to permutations of the records and,
+    because of the per-coordinate normalisation, to coordinate-wise affine maps
+    $x\mapsto Dx+b$ with $D$ diagonal and positive. It is \emph{not} rotation invariant.
+  \item \emph{What it sees.} Averaging over subsamples makes it a stable estimate of a
+    population quantity: with $n_{\mathrm{rep}}=1$, partition recovery degrades
+    (Section~\ref{sec:e_ablation}). Empirically (Section~\ref{sec:e_alignment}) it separates
+    clients that differ in intrinsic dimension or tail heaviness, but not clients that
+    differ only by mean shifts, which the normalisation removes, or only in their labelling
+    rule, since labels are never used.
+  \item \emph{No data-level stability.} As noted in Section~\ref{sec:bg_ph}, the map from
+    data to descriptor is not Lipschitz, so we make no claim of that kind.
+  \item \emph{Cost.} The $H_0$ computation sorts all pairs, at cost
+    $O(n_{\mathrm{sub}}^2\log n_{\mathrm{sub}})$. The $H_1$ cost is polynomial in the
+    number of simplices; the measured times are in Appendix~\ref{app:cost}.
+\end{itemize}
+
+% --------------------------------------------------------------------------
+\subsection{Server-side structure: partition, trust and weights}
+\label{sec:structure}
+
+All quantities in this subsection are computed once, from $\{\hat\phi_k\}$ and the sample
+sizes $\{n_k\}$ only.
+
+\paragraph{Partition.}
+Average-linkage agglomerative clustering of $\{\hat\phi_k\}$ in Euclidean distance, cut at
+$M$ clusters, gives $\calC=\{C_1,\dots,C_M\}$; we write $c(k)$ for the cluster of client $k$.
+
+\paragraph{Trust.}
+Let $\delta_k=\frac{1}{K-1}\sum_{l\neq k}\norm{\hat\phi_k-\hat\phi_l}$. We use the robust
+score
+\[
+  z_k=\frac{\delta_k-\med(\delta)}{\max\{1.4826\,\MAD(\delta),\,s_0\med(\delta)\}},
+  \qquad t_k=\exp\bigl(-\max\{z_k-z_0,\,0\}\bigr),
+\]
+with $z_0=2$ and $s_0=0.05$ \citep{huber2009robust}. An earlier version used the mean and
+standard deviation of $\delta$; Proposition~\ref{prop:cap} shows that this caps the
+achievable down-weighting at a level fixed by the fraction of corrupted clients alone.
+
+\paragraph{Weights and masses.}
+For $k\in C_j$, with $\bar\phi_j$ the mean of $\{\hat\phi_l\}_{l\in C_j}$,
+\begin{equation}
+  w_k=\frac{n_k\,e^{-\norm{\hat\phi_k-\bar\phi_j}}\,t_k}{\sum_{l\in C_j}n_l\,e^{-\norm{\hat\phi_l-\bar\phi_j}}\,t_l},
+  \qquad
+  \pi_j=\frac{\sum_{k\in C_j}n_k t_k}{\sum_{k}n_k t_k}.
+  \label{eq:weights}
+\end{equation}
+Thus $\sum_{k\in C_j}w_k=1$ for every $j$, $\sum_j\pi_j=1$, and $\omega_k:=\pi_{c(k)}w_k$
+are mixture weights over all clients.
+
+% --------------------------------------------------------------------------
+\subsection{Training: blended clustered local gradient descent}
+\label{sec:training}
+
+\paragraph{Local objective.}
+In this paper $F_k$ is the $\ell_2$-regularised logistic loss with all parameters penalised,
+$F_k(\theta)=\frac1{n_k}\sum_i\log(1+e^{-\tilde y_i\langle\theta,\tilde x_i\rangle})+\frac\lambda2\norm{\theta}^2$,
+where $\tilde x_i=(x_i,1)$ and $\tilde y_i\in\{\pm1\}$. It is $\mu$-strongly convex with
+$\mu=\lambda$, and $L_k$-smooth with $L_k=\lambda+\norm{\tilde X_k}_2^2/(4n_k)$, so the
+assumptions of Section~\ref{sec:theory} hold with explicit constants.
+
+\paragraph{Round.}
+Client $k\in C_j$ starts from $\theta^t_j$ and performs $\tau$ gradient steps with step size
+$\eta\le1/L$, where $L=\max_k L_k$:
+\[
+  \theta_k^{t+1}=T_k(\theta_j^t),\qquad T_k:=(\Id-\eta\nabla F_k)^{\tau}.
+\]
+The server then forms
+\begin{equation}
+  u_j=\sum_{k\in C_j}w_k\,\theta_k^{t+1},
+  \qquad
+  \theta_j^{t+1}=(1-\alpha)\,u_j+\alpha\sum_{i=1}^M\pi_i\,u_i .
+  \label{eq:round}
+\end{equation}
+Three special cases are worth noting:
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item $M=1$ is FedAvg with weights $w$;
+  \item $\alpha=1$ trains one consensus model with weights $\omega$;
+  \item $\alpha=0$ runs $M$ independent weighted FedAvg instances.
+\end{itemize}
+Each client finally uses $\theta^T_{c(k)}$.
+
+\paragraph{Calibrating the blending coefficient.}
+Proposition~\ref{prop:blend} shows that, at the fixed point, the fraction of consensus
+induced by $\alpha$ is $\alpha/(1-(1-\alpha)q)\ge\alpha$, where $q=(1-\eta\mu)^{\tau}$. With
+few local steps relative to the conditioning, even a small $\alpha$ removes most of the
+personalisation. For example, with our default hyper-parameters $q=\ThQten$, so the value
+$\alpha=0.3$ used in an earlier version corresponds to an effective consensus fraction of
+$\ThAlphaEffVone$. We therefore specify a target effective fraction $\bar\alpha$ and set
+\begin{equation}
+  \alpha=\frac{\bar\alpha\,(1-q)}{1-\bar\alpha\,q},\qquad q=(1-\eta\lambda)^{\tau}.
+  \label{eq:alphacal}
+\end{equation}
+We use $\bar\alpha=0.3$ throughout, without tuning; this gives $\alpha=\ThAlphaCalTen$.
+
+\begin{algorithm}[t]
+\caption{\ptopofl}
+\label{alg:ptopofl}
+\begin{algorithmic}[1]
+\Require clients $k=1,\dots,K$; number of clusters $M$; target blending $\bar\alpha$;
+         local steps $\tau$; step size $\eta\le 1/L$; rounds $T$
+\State \textbf{Descriptor phase (once).} Each client sends $\phi_k$ (Eq.~\ref{eq:descriptor}), optionally with Gaussian noise (Prop.~\ref{prop:dp})
+\State Server: $\hat\phi_k\gets\phi_k/\norm{\phi_k}$; $\calC\gets$ average-linkage clustering of $\{\hat\phi_k\}$ into $M$ clusters
+\State Server: compute $t_k$, $w_k$, $\pi_j$ (Section~\ref{sec:structure}); $\alpha$ from Eq.~\eqref{eq:alphacal}; send $c(k)$ (and $w_k$, for SecAgg) to client $k$
+\State $\theta_j^0\gets 0$ for $j=1,\dots,M$
+\For{$t=0,\dots,T-1$}
+  \For{each client $k$ \textbf{in parallel}}
+     \State $\theta\gets\theta^t_{c(k)}$; \textbf{repeat} $\tau$ times: $\theta\gets\theta-\eta\nabla F_k(\theta)$; \ \textbf{send} $\theta_k^{t+1}\gets\theta$
+  \EndFor
+  \State Server: $u_j\gets\sum_{k\in C_j}w_k\theta_k^{t+1}$ for all $j$ \Comment{per-cluster SecAgg possible}
+  \State Server: $\theta_j^{t+1}\gets(1-\alpha)u_j+\alpha\sum_i\pi_iu_i$; send $\theta^{t+1}_{c(k)}$ to client $k$
+\EndFor
+\State \Return personalised models $\theta^T_{c(k)}$, $k=1,\dots,K$
+\end{algorithmic}
+\end{algorithm}
+
+% --------------------------------------------------------------------------
+\subsection{Communication, secure aggregation and differential privacy}
+\label{sec:comm}
+
+\paragraph{Communication.}
+Per round and per client, \ptopofl\ sends $p$ floats up and $p$ floats down, as FedAvg does.
+The descriptor adds $46$ floats once. IFCA broadcasts all $M$ cluster models in every round
+($Mp$ floats down); SCAFFOLD doubles both directions (Appendix~\ref{app:cost}).
+
+\begin{proposition}[Secure-aggregation compatibility]
+\label{prop:secagg}
+Suppose that in every round the server learns, for each cluster, only the output of a
+secure-aggregation protocol over the clients of that cluster on the inputs
+$w_k\theta_k^{t+1}$. Then it can execute Algorithm~\ref{alg:ptopofl} exactly. Apart from the
+descriptors, the partition, the weights and the broadcast models, it learns nothing beyond
+the per-cluster sums $u_j$.
+\end{proposition}
+\begin{proof}
+Equation~\eqref{eq:round} uses the client models only through $u_j$. The weights $w_k$ are
+fixed before training and are known to client $k$, which can therefore submit
+$w_k\theta_k^{t+1}$. The second statement is the security guarantee of secure aggregation
+\citep{bonawitz2017practical}, applied separately to each cluster.
+\end{proof}
+
+Two caveats apply. A cluster with a single client exposes that client's model, so
+deployments should enforce $|C_j|\ge2$. And the descriptors are visible to the server unless
+they are noised (Proposition~\ref{prop:dp}). Clustering on server-side model comparisons
+\citep{sattler2020clustered,long2023multi} is harder to combine with secure aggregation,
+because it needs individual updates. IFCA assigns clusters on the client side and can be
+combined with secure aggregation by masking per-cluster contributions, at the cost of
+broadcasting $M$ models per round.
+
+\begin{proposition}[Record-level differential privacy of everything a client transmits]
+\label{prop:dp}
+Fix client $k$ and consider neighbouring datasets that differ by the replacement of one
+record. Suppose that:
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item every record is pre-processed so that $\norm{\tilde x_i}\le C$, which implies
+    $\norm{\nabla_\theta\ell(\theta;x_i,y_i)}\le C$ for the logistic loss;
+  \item every local step adds noise to the gradient,
+    $\theta\gets\theta-\eta\bigl(\nabla F_k(\theta)+\tfrac{2C\sigma_{\mathrm{DP}}}{n_k}\xi\bigr)$
+    with $\xi\sim\mathcal N(0,I_p)$;
+  \item the client releases $\hat\phi_k+\mathcal N(0,\sigma_\phi^2I_{46})$ in place of
+    $\hat\phi_k$.
+\end{itemize}
+Then the sequence of all messages sent by client $k$ over $T$ rounds is
+$(\varepsilon,\delta)$-differentially private, with
+\[
+  \varepsilon=R+2\sqrt{R\log(1/\delta)},\qquad R=\frac{T\tau}{2\sigma_{\mathrm{DP}}^2}+\frac{2}{\sigma_\phi^2}.
+\]
+Everything the server computes from these messages, and everything other clients receive,
+inherits the guarantee by post-processing.
+\end{proposition}
+The proof (Appendix~\ref{app:proof_dp}) composes Gaussian mechanisms in R\'enyi DP
+\citep{mironov2017renyi}. The descriptor term uses only the trivial bound
+$\norm{\hat\phi(\calD)-\hat\phi(\calD')}\le2$ on the unit sphere. We do not know of a tighter
+provable bound on the per-record sensitivity of this descriptor, consistent with
+\citet{kang2024differentially}, and the price of this looseness is quantified in
+Section~\ref{sec:e_privacy}. Without noise, the models $\theta_k^t$ are exactly as exposed as
+in FedAvg, and the descriptor reveals client-level properties of the data by design.
+
+% --------------------------------------------------------------------------
+\section{Theory}
+\label{sec:theory}
+% --------------------------------------------------------------------------
+
+We analyse the iteration that Algorithm~\ref{alg:ptopofl} actually runs, with clustering,
+weighting and blending included. Complete proofs are in Appendix~\ref{app:proofs}.
+
+\subsection{Setting}
+\begin{assumption}[Local objectives]\label{ass:sc}
+Each $F_k$ is $\mu$-strongly convex and $L$-smooth, with $0<\mu\le L$; write $\kappa=L/\mu$.
+\end{assumption}
+\begin{assumption}[Fixed structure]\label{ass:fixed}
+The partition $\calC=\{C_1,\dots,C_M\}$, the weights $w_k>0$ (with $\sum_{k\in C_j}w_k=1$),
+the masses $\pi_j>0$ (with $\sum_j\pi_j=1$) and the coefficient $\alpha\in[0,1]$ do not
+change during training.
+\end{assumption}
+Assumption~\ref{ass:fixed} holds by construction: the structure is computed once, in round
+$0$. Every result below holds for \emph{any} structure satisfying it, whether produced by
+descriptors, by a random draw, or by an oracle. Topology influences the guarantees only
+through the quantities that the structure induces, which we measure.
+
+\paragraph{Notation.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{Cluster models and norms.} Write $\Theta=(\theta_1,\dots,\theta_M)\in(\R^p)^M$
+    and use the weighted norm $\pinorm{\Theta}=(\sum_j\pi_j\norm{\theta_j}^2)^{1/2}$.
+  \item \emph{Blending matrix.} $B=(1-\alpha)I_M+\alpha\mathbf{1}\pi^\top$, acting
+    blockwise as $(B\Theta)_j=\sum_iB_{ji}\theta_i$.
+  \item \emph{Local and round operators.} With $T_k=(\Id-\eta\nabla F_k)^{\tau}$, define
+    the cluster operator $S_j(\theta)=\sum_{k\in C_j}w_kT_k(\theta)$, the joint operator
+    $S(\Theta)=(S_1(\theta_1),\dots,S_M(\theta_M))$ and the round operator $\Psi=B\circ S$.
+    Algorithm~\ref{alg:ptopofl} is the iteration $\Theta^{t+1}=\Psi(\Theta^t)$.
+  \item \emph{Contraction factor.} $q:=(1-\eta\mu)^{\tau}$.
+  \item \emph{Optima.} $\theta_k^{\loc}=\argmin F_k$ is the local optimum of client $k$.
+    $G_j=\sum_{k\in C_j}w_kF_k$ is the cluster objective, with minimiser $\theta_j^\star$,
+    and $\Theta^\star=(\theta_1^\star,\dots,\theta_M^\star)$.
+  \item \emph{Drift constant.} $\zeta_j=\sum_{k\in C_j}w_k\norm{\nabla F_k(\theta_j^\star)}$.
+  \item \emph{Between-cluster dispersion.} For any $\Theta$,
+    $D(\Theta)=\pinorm{\Theta-\mathbf{1}\otimes\bar\theta}$ with
+    $\bar\theta=\sum_j\pi_j\theta_j$.
+\end{itemize}
+
+\subsection{Linear convergence of the complete procedure}
+
+\begin{theorem}[Contraction]\label{thm:contraction}
+Under Assumptions~\ref{ass:sc}--\ref{ass:fixed} and $0<\eta\le1/L$, for every $\tau\ge1$ and
+every $\alpha\in[0,1]$ the round operator $\Psi$ is a $q$-contraction on
+$((\R^p)^M,\pinorm{\cdot})$. Hence it has a unique fixed point
+$\hat\Theta=\hat\Theta(\alpha,\eta,\tau)$, and Algorithm~\ref{alg:ptopofl} satisfies
+\[
+  \pinorm{\Theta^t-\hat\Theta}\le q^t\,\pinorm{\Theta^0-\hat\Theta}=(1-\eta\mu)^{\tau t}\pinorm{\Theta^0-\hat\Theta}.
+\]
+\end{theorem}
+The rate $(1-\eta\mu)^{\tau t}$, that is $(1-1/\kappa)^{\tau t}$ for $\eta=1/L$, is the
+usual linear rate of $\tau t$ gradient steps. The content of the theorem is that it holds
+for the \emph{whole} procedure, including the clustering, the descriptor-dependent weights
+and the blending; $M=1$ recovers weighted FedAvg. The theorem says nothing yet about
+\emph{where} the iteration converges, which is the subject of the next results.
+
+\subsection{Where the iteration converges}
+
+\begin{theorem}[Local-step drift]\label{thm:drift}
+Under the assumptions of Theorem~\ref{thm:contraction}, take $\alpha=0$. Then for every
+cluster $j$,
+\[
+  \norm{\hat\theta_j-\theta_j^\star}\le c(\eta,\tau)\,\frac{\zeta_j}{\mu},
+  \qquad
+  c(\eta,\tau)=\min\Bigl\{\tfrac{1}{2}\eta L(\tau-1)(1+\eta\mu\tau),\ \tfrac{1+q}{1-q}\Bigr\}.
+\]
+In particular, $\hat\theta_j=\theta_j^\star$ when $\tau=1$, and
+$\norm{\hat\theta_j-\theta_j^\star}\le\eta L(\tau-1)\zeta_j/\mu$ whenever $\eta\mu\tau\le1$.
+\end{theorem}
+
+\begin{proposition}[Effective strength of blending]\label{prop:blend}
+Under the assumptions of Theorem~\ref{thm:contraction}, let $\hat\Theta_\alpha$ be the fixed
+point for coefficient $\alpha$.
+\begin{enumerate}[label=(\alph*),leftmargin=1.6em,itemsep=1pt]
+  \item $\pinorm{\hat\Theta_\alpha-\hat\Theta_0}\le\frac{\alpha}{1-q}\,D(\hat\Theta_0)$.
+  \item (Exact form for quadratics.) Suppose
+    $F_k(\theta)=\tfrac12(\theta-\theta_k^{\loc})^\top H(\theta-\theta_k^{\loc})+c_k$ with a
+    Hessian $\mu I\preceq H\preceq LI$ common to all clients, and let $Q=(I-\eta H)^{\tau}$.
+    Then $\hat\Theta_0=\Theta^\star$, $\theta_j^\star=\sum_{k\in C_j}w_k\theta_k^{\loc}$, and
+    \[
+      \hat\theta_{\alpha,j}=\bar m+(1-\alpha)\bigl(I-(1-\alpha)Q\bigr)^{-1}(I-Q)\,(\theta_j^\star-\bar m),
+      \qquad\bar m=\textstyle\sum_i\pi_i\theta_i^\star .
+    \]
+    In an eigendirection of $H$ with eigenvalue $h$, the fraction of the between-cluster
+    deviation removed by blending is
+    \[
+      \alpha_{\mathrm{eff}}(h)=\frac{\alpha}{1-(1-\alpha)q_h},\qquad q_h=(1-\eta h)^{\tau}.
+    \]
+    This quantity is non-decreasing in $q_h$, and hence at most $\alpha/(1-(1-\alpha)q)$.
+  \item (Calibration.) The choice~\eqref{eq:alphacal} gives
+    $\alpha_{\mathrm{eff}}(h)\le\bar\alpha$ for every $h\in[\mu,L]$, with equality at
+    $h=\mu$.
+\end{enumerate}
+\end{proposition}
+
+Proposition~\ref{prop:blend} explains why blending must be read together with local
+computation. For $\tau=1$ and small $\eta\mu$, any fixed $\alpha>0$ drives every cluster
+model to the consensus. In the limit $q\to0$ of exact local solves, $\alpha$ acts at face
+value. Blending is the ``adapt-then-combine'' structure of diffusion strategies
+\citep{sayed2014adaptation} with a rank-one mixing matrix. The calibration rule removes the
+dependence on $(\eta,\tau)$, and Figure~\ref{fig:theory}(c) checks it on the
+(non-quadratic) logistic loss.
+
+\subsection{When does clustering lower the error floor?}
+
+The quality of a partition can be measured by the dispersion of the client optima. With the
+mixture weights $\omega_k=\pi_{c(k)}w_k$, define
+\[
+  \Vtot=\sum_k\omega_k\norm{\theta_k^{\loc}-\bar\theta^{\loc}}^2,\qquad
+  \Vin(\calC)=\sum_j\pi_j\underbrace{\sum_{k\in C_j}w_k\norm{\theta_k^{\loc}-\bar\theta_j^{\loc}}^2}_{=:V_j},\qquad
+  \rho(\calC)=\frac{\Vin(\calC)}{\Vtot}\in[0,1],
+\]
+where $\bar\theta^{\loc}=\sum_k\omega_k\theta^{\loc}_k$ and
+$\bar\theta_j^{\loc}=\sum_{k\in C_j}w_k\theta_k^{\loc}$.
+
+\begin{proposition}[Heterogeneity decomposition]\label{prop:anova}
+Under Assumption~\ref{ass:sc}, for every partition and weights:
+\begin{enumerate}[label=(\roman*),leftmargin=1.6em,itemsep=1pt]
+  \item $\Vtot=\Vin(\calC)+\Vbet(\calC)$ with
+    $\Vbet(\calC)=\sum_j\pi_j\norm{\bar\theta_j^{\loc}-\bar\theta^{\loc}}^2\ge0$.
+  \item \emph{(Any single model pays the total dispersion.)} For every $\theta\in\R^p$,
+    $\sum_k\omega_k\norm{\theta-\theta_k^{\loc}}^2=\norm{\theta-\bar\theta^{\loc}}^2+\Vtot\ge\Vtot$.
+  \item \emph{(Cluster optima pay only the within-cluster part.)}
+    $\norm{\theta_j^\star-\bar\theta^{\loc}_j}\le\kappa\sqrt{V_j}$, and therefore
+    $\sum_k\omega_k\norm{\theta^\star_{c(k)}-\theta_k^{\loc}}^2\le(1+\kappa^2)\,\Vin(\calC)$.
+  \item \emph{(Excess risk.)} With $F_k^\star=F_k(\theta_k^{\loc})$, every single model
+    satisfies $\sum_k\omega_k[F_k(\theta)-F_k^\star]\ge\frac\mu2\Vtot$, whereas
+    $\sum_k\omega_k[F_k(\theta^\star_{c(k)})-F_k^\star]\le\frac L2(1+\kappa^2)\Vin(\calC)$.
+    The cluster optima therefore beat every non-personalised model whenever
+    $\rho(\calC)<1/(\kappa(1+\kappa^2))$.
+  \item \emph{(Common Hessian, exact.)} In the quadratic setting of
+    Proposition~\ref{prop:blend}(b),
+    \[
+      \min_\theta\sum_k\omega_k[F_k(\theta)-F_k^\star]-\sum_k\omega_k[F_k(\theta^\star_{c(k)})-F_k^\star]
+      =\tfrac12\tr\bigl(H\Sigma_{\mathrm{bet}}(\calC)\bigr)\ge0,
+    \]
+    where $\Sigma_{\mathrm{bet}}(\calC)=\sum_j\pi_j(\bar\theta^{\loc}_j-\bar\theta^{\loc})(\bar\theta^{\loc}_j-\bar\theta^{\loc})^\top$.
+    The gain is never negative and grows with the between-cluster share.
+\end{enumerate}
+\end{proposition}
+
+\begin{corollary}[End-to-end personalised error]\label{cor:endtoend}
+Under the assumptions of Theorem~\ref{thm:contraction}, for all $t\ge0$,
+\[
+  \sum_k\omega_k\norm{\theta^t_{c(k)}-\theta_k^{\loc}}^2
+  \le
+  4q^{2t}\pinorm{\Theta^0-\hat\Theta_\alpha}^2
+  +\frac{4\alpha^2}{(1-q)^2}D(\hat\Theta_0)^2
+  +4(1+\kappa^2)\bigl(1+c(\eta,\tau)^2\kappa^2\bigr)\,\Vin(\calC).
+\]
+\end{corollary}
+The four contributions are, respectively, an optimisation error that vanishes linearly
+(Theorem~\ref{thm:contraction}); a blending shift that vanishes at $\alpha=0$
+(Proposition~\ref{prop:blend}); and, in the last term, the drift and the within-cluster
+heterogeneity, both of which are proportional to $\Vin(\calC)=\rho(\calC)\Vtot$. By
+Proposition~\ref{prop:anova}(ii), no single model can do better than $\Vtot$. Personalisation
+therefore lowers the floor in proportion to $\rho(\calC)$. The constants are worst-case over
+all strongly convex losses and are pessimistic when $\kappa$ is large; the common-Hessian
+identity (v) is exact.
+
+This statement replaces the ``topology--gradient alignment'' assumption of earlier versions.
+Whether the descriptor partition helps is equivalent to whether $\rho(\calC_{\mathrm{topo}})$
+is small, and $\rho$ can be computed in experiments (Section~\ref{sec:e_alignment}) by
+comparing the descriptor partition with random and oracle partitions. Nothing in the
+convergence guarantee depends on that comparison.
+
+\subsection{Stochastic local steps: a bias--variance trade-off of clustering}
+
+\begin{theorem}[Stochastic local steps]\label{thm:stochastic}
+Under the assumptions of Theorem~\ref{thm:contraction}, suppose that every local step uses
+$\nabla F_k(\theta)+\xi$, where the noise is independent across clients and satisfies
+$\E[\xi\mid\text{past}]=0$ and $\E[\norm{\xi}^2\mid\text{past}]\le\sigma^2$. Suppose also that
+each $\nabla^2F_k$ is $M_H$-Lipschitz. Let $\hat\Theta$ be the deterministic fixed point of
+Theorem~\ref{thm:contraction}. Define $W_\pi=\sum_j\pi_j\sum_{k\in C_j}w_k^2$ and
+$m_\tau=\sum_{s<\tau}(1-\eta\mu)^{2s}\le\min\{\tau,1/(\eta\mu)\}$. Then
+\[
+  \E\pinorm{\Theta^t-\hat\Theta}^2\le\Bigl(\tfrac{1+q^2}{2}\Bigr)^{t}\pinorm{\Theta^0-\hat\Theta}^2
+  +\frac{2}{1-q^2}\Bigl[W_\pi\,\eta^2\sigma^2m_\tau+\bar\beta^2\,\tfrac{1+q^2}{1-q^2}\Bigr],
+  \qquad\bar\beta\le\tfrac14M_H\eta^3\sigma^2\tau^2 .
+\]
+If every $F_k$ is quadratic, then $\bar\beta=0$, the rate is $q^2$ and the factor $2$
+disappears. The leading term satisfies
+$W_\pi\eta^2\sigma^2m_\tau/(1-q^2)\le W_\pi\,\eta\sigma^2(1+\eta\mu\tau)/\mu$.
+\end{theorem}
+
+Since $\sum_{k\in C_j}w_k^2\ge1/|C_j|$, splitting $K$ clients into $M$ equal clusters with
+uniform weights raises $W_\pi$ from $1/K$ to $M/K$, and non-uniform weights raise it further.
+Clustering therefore trades the heterogeneity bias of Corollary~\ref{cor:endtoend} for a
+larger noise floor: it pays off when $\Vbet(\calC)$ is large relative to the noise. The
+logistic loss satisfies the Hessian-Lipschitz condition with
+$M_H\le0.097\max_i\norm{\tilde x_i}^3$. Theorem~\ref{thm:stochastic} also covers the DP-GD
+updates of Proposition~\ref{prop:dp}, with $\sigma^2=p\,(2C\sigma_{\mathrm{DP}}/\min_kn_k)^2$.
+
+\subsection{Stability of the partition}
+\label{sec:theory_partition}
+
+Let $\{v_k\}_{k=1}^K\subset\R^m$ be the vectors that are clustered (here
+$v_k=\hat\phi_k$). Define the strict margin of a partition $\calC$ by
+\[
+  \gamma(\calC)=\min_{i\ne j}\ \min_{k\in C_i,\,l\in C_j}\norm{v_k-v_l}\;-\;\max_j\ \max_{k,l\in C_j}\norm{v_k-v_l}.
+\]
+
+\begin{theorem}[Partition stability]\label{thm:partition}
+If $\gamma(\calC)>0$, then single-, complete- and average-linkage agglomerative clustering,
+cut at $|\calC|$ clusters, all return $\calC$. If moreover $\norm{\tilde v_k-v_k}\le\nu$ for
+every $k$ and $4\nu<\gamma(\calC)$, they also return $\calC$ when applied to
+$\{\tilde v_k\}$.
+\end{theorem}
+
+\begin{corollary}[Gaussian noise on the descriptors]\label{cor:gauss}
+Let $\tilde v_k=v_k+\xi_k$ with independent $\xi_k\sim\mathcal N(0,\sigma_\phi^2I_m)$. With
+probability at least $1-\beta$, the partition is unchanged whenever
+$\sigma_\phi\bigl(\sqrt m+\sqrt{2\log(K/\beta)}\bigr)<\gamma(\calC)/4$.
+\end{corollary}
+
+A separation condition on the \emph{average} linkages alone is not sufficient, which is why
+both the minimum between-cluster distance and the maximum within-cluster distance appear.
+Appendix~\ref{app:counterexample} gives a configuration in which the average-linkage margin
+is $15$ and the perturbations have size $0.01$, yet the partition changes. Combining
+Theorems~\ref{thm:contraction} and~\ref{thm:partition}: any perturbation of the descriptors
+that preserves the partition (subsampling noise, or DP noise satisfying
+Corollary~\ref{cor:gauss}) leaves every guarantee of this section unchanged.
+
+\subsection{Trust weights and corrupted clients}
+\label{sec:theory_trust}
+
+\begin{proposition}[Weight of corrupted clients inside a cluster]\label{prop:trust}
+Let a cluster $C$ contain honest clients $H_C$ and corrupted clients $A_C$, with
+$|A_C|=\epsilon|C|$, $0<\epsilon<1$. Assume that $t_k=1$ on $H_C$ and $t_k\le e^{-\Delta}$ on
+$A_C$, which holds when $z_k\le z_0$ on $H_C$ and $z_k\ge z_0+\Delta$ on $A_C$. Let
+\[
+  \Gamma=\frac{\max_{k\in A_C}n_k}{\min_{h\in H_C}n_h}\,
+  \exp\Bigl(\max_{h\in H_C}\norm{\hat\phi_h-\bar\phi_C}-\min_{k\in A_C}\norm{\hat\phi_k-\bar\phi_C}\Bigr)\le\frac{\max n}{\min n}\,e^{2}.
+\]
+Then the corrupted clients receive total weight
+\[
+  \sum_{k\in A_C}w_k\le\frac{\epsilon\,\Gamma e^{-\Delta}}{(1-\epsilon)+\epsilon\,\Gamma e^{-\Delta}}.
+\]
+This bound is below $\epsilon$ if and only if $\Gamma e^{-\Delta}<1$, and below $\epsilon^2$
+if and only if $\Delta\ge\log\bigl(\Gamma(1+1/\epsilon)\bigr)$.
+\end{proposition}
+
+\begin{proposition}[Mean/standard-deviation scores cap the achievable down-weighting]\label{prop:cap}
+Let $z_k=(\delta_k-\mathrm{mean}(\delta))/\mathrm{std}(\delta)$ (population standard deviation)
+and let $A\subset[K]$ with $|A|=\epsilon K$. Then
+$\frac1{|A|}\sum_{k\in A}z_k\le\sqrt{(1-\epsilon)/\epsilon}$. Consequently, under the rule
+$t_k=e^{-\max\{z_k-1,0\}}$, a margin $z_k\ge1+\Delta$ on all of $A$ forces
+$\Delta\le\sqrt{(1-\epsilon)/\epsilon}-1$, however far the corrupted descriptors lie.
+In particular there is no down-weighting at all when $\epsilon\ge1/2$; with $K=8$ and two
+corrupted clients, $e^{-\Delta}\ge e^{1-\sqrt3}\approx0.48$.
+\end{proposition}
+
+Proposition~\ref{prop:cap} is a version of Samuelson's inequality
+\citep{samuelson1968deviant}, and it motivates the robust score of
+Section~\ref{sec:structure}. Under that score, if fewer than half of the clients are
+corrupted and the honest $\delta_k$ lie in $[a,b]$, then $\MAD(\delta)\le b-a$. Any corrupted
+client with $\delta_k\ge D$ then has $z_k\ge(D-b)/\max\{1.4826(b-a),s_0\med(\delta)\}$, which
+grows linearly with its separation $D$; so the factor $e^{-\Delta}$ in
+Proposition~\ref{prop:trust} can become arbitrarily small. These statements are conditional
+on separation \emph{in descriptor space}. Corruption that leaves the feature geometry intact
+(label noise, label inversion) produces no separation, and forged descriptors defeat any
+descriptor-based rule. Section~\ref{sec:e_robust} measures how often separation occurs in
+practice.
+
+\subsection{What the theory does not say}
+\label{sec:theory_scope}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item The results assume strongly convex and smooth local losses. Non-convex models (deep
+    networks) are not covered.
+  \item The partition is fixed. Re-clustering during training restarts the analysis, which
+    then applies between re-clustering events.
+  \item The guarantees hold for any partition. They do \emph{not} imply that descriptor
+    partitions are good. That is an empirical property, governed by $\rho(\calC)$ and
+    measured in Section~\ref{sec:experiments}.
+\end{itemize}
+
+% --------------------------------------------------------------------------
+\section{Experiments}
+\label{sec:experiments}
+% --------------------------------------------------------------------------
+
+Every number, table and figure in this section is produced by a single released script with
+fixed seeds (Appendix~\ref{app:repro}).
+
+\subsection{Setup}
+\label{sec:exp_setup}
+
+\paragraph{Federations.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{(A) Synthetic, clustered.} $K=8$ clients, $d=20$ features, and two latent
+    groups of four clients. Group-$1$ features lie near a random $3$-dimensional subspace,
+    plus isotropic noise of standard deviation $0.3$; group-$0$ features are isotropic
+    Gaussian; total variance is matched. Labels follow a logistic model with a
+    group-specific direction $\beta_0\pm v$ ($v\perp\beta_0$) and logits rescaled to
+    standard deviation~$3$. Each client draws its own prevalence from $\mathcal U(0.10,0.45)$
+    and its size from $\{60,\dots,250\}$, and is split $70/30$ (stratified) into training
+    and test sets. The controls of Section~\ref{sec:e_alignment} change one ingredient at a
+    time:
+    \begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+      \item \emph{aligned (tails)}: group-$1$ features are Student-$t_3$;
+      \item \emph{concept only}: all features are isotropic and the groups differ only in
+        $\beta$;
+      \item \emph{geometry only}: the groups differ only in geometry and share $\beta$.
+    \end{itemize}
+  \item \emph{(B) Label skew.} $K=10$ clients with class-conditional Gaussians: positives
+    have mean $0.35$ and standard deviation $1.2$ on $10$ informative coordinates, negatives
+    mean $0$ and standard deviation $1$. Each client draws its prevalence from
+    $\mathcal U(0.1,0.9)$ and holds $n=150$ records. The classes overlap. (In the generator
+    of an earlier version of this work they were linearly separable, and every method
+    reached AUC $1$.)
+  \item \emph{(HD) Fed-Heart-Disease.} Four centres (Cleveland, Budapest, Switzerland, Long
+    Beach) from the UCI heart-disease study \citep{detrano1989international}, with the site
+    partition of FLamby \citep{terrail2022flamby}. We keep the ten attributes without
+    systematic missingness, remove records with missing values, and predict $1[\mathrm{num}>0]$;
+    the site sizes are \HDsizes.
+\end{itemize}
+
+\paragraph{Model and training.}
+All methods train an $\ell_2$-regularised logistic regression ($\lambda=0.01$, all
+parameters penalised) with step size $\eta=1/\max_kL_k$, $\tau=10$ full-batch gradient steps
+per round, and $T=150$ rounds. Hence $q=\ThQten$ and $\kappa\approx\ThKappa$ on (A). The
+local budget is identical across methods, except that pFedMe additionally solves its inner
+proximal problems, as its algorithm requires.
+
+\paragraph{Baselines.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item Local training and FedAvg.
+  \item FedProx ($\mu=0.1$) and SCAFFOLD (option~II).
+  \item pFedMe ($\lambda=15$) and Ditto ($\lambda=0.1$).
+  \item IFCA ($M=2$, initialised from two distinct clients' locally trained models).
+  \item A \emph{PACFL-style} baseline \citep{vahidian2023efficient}: each client sends the
+    top-$3$ left singular vectors of its data matrix, clients are clustered on the sum of
+    principal angles, and training is identical to \ptopofl. It therefore isolates the
+    effect of the descriptor.
+\end{itemize}
+Two non-deployable references bracket the role of the partition: the same clustered training
+with a \emph{random} partition of identical cluster sizes, and with an \emph{oracle}
+partition ($k$-means on the exact local optima, which requires seeing the local models).
+Implementation details are in Appendix~\ref{app:baselines}.
+
+\paragraph{Metrics and statistics.}
+Each honest client is evaluated on its own held-out split with the model it receives. The
+primary metric is the test log-loss, weighted by test size, because it is the quantity
+controlled by Corollary~\ref{cor:endtoend}; we also report the pooled AUC. To compare partitions, $\rho(\calC)$ is computed with
+sample-proportional weights ($\omega_k=p_k$) for every partition, so that $\Vtot$ is common
+and only $\Vin$ varies. Results are means
+$\pm$ standard deviations over $\NumSeeds$ seeds, which control data, splits and descriptor
+subsamples. We compare \ptopofl\ with each deployable baseline by two-sided paired Wilcoxon
+signed-rank tests, Holm-corrected \citep{holm1979simple}; in the tables, $^{+}$ ($^{-}$)
+marks baselines significantly worse (better) than \ptopofl\ at level $0.05$. The
+hyper-parameters of \ptopofl\ were fixed in advance ($M=2$, $\bar\alpha=0.3$, $z_0=2$) and
+were not tuned on test data (Appendix~\ref{app:hparams}).
+
+\subsection{The theory, checked numerically}
+\label{sec:e_theory}
+
+\begin{figure}[t]
+\centering
+\resfig{fig_theory}{\textwidth}
+\caption{\textbf{Numerical checks of Section~\ref{sec:theory}} on federation (A).
+(a) The distance to the fixed point decays at least as fast as $q^t$
+(Theorem~\ref{thm:contraction}); dashed lines show the bound.
+(b) The drift bias at $\alpha=0$ grows linearly in $\eta(\tau-1)$ and lies below the bound of
+Theorem~\ref{thm:drift} (dotted).
+(c) Fraction of the between-cluster spread retained by blending; the lines are the
+predictions of Proposition~\ref{prop:blend} at the smallest (dashed) and median (dotted)
+Hessian eigenvalue.}
+\label{fig:theory}
+\end{figure}
+
+Figure~\ref{fig:theory} shows three things.
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{Contraction (panel a).} For $\tau\in\{1,10,50\}$ the ratio between the
+    measured error and the bound $q^t\pinorm{\Theta^0-\hat\Theta}$ never exceeds
+    $\ThContractionWorst$.
+  \item \emph{Drift (panel b).} The drift bias vanishes at $\tau=1$ up to solver precision
+    ($\ThBiasTauOne$), grows linearly in $\eta(\tau-1)$, and stays below the bound of
+    Theorem~\ref{thm:drift} in every configuration. The bound is loose by a median factor of
+    $\ThBiasTightness$, as expected from its worst-case dependence on $\kappa$.
+  \item \emph{Blending (panel c).} The retained personalisation follows
+    Proposition~\ref{prop:blend}. With $\tau=10$, the coefficient $\alpha=0.3$ of the
+    earlier version removes about $\ThAlphaEffVone$ of the between-cluster spread, whereas
+    the calibrated value $\alpha=\ThAlphaCalTen$ removes the intended $\bar\alpha=0.3$. The
+    calibration also makes performance insensitive to $\tau$ (Table~\ref{tab:alphatau}).
+\end{itemize}
+
+\subsection{Main results}
+\label{sec:e_main}
+
+\begin{table}[t]
+\centering\small
+\caption{\textbf{Personalised performance of honest clients} (mean $\pm$ std over
+$\NumSeeds$ seeds; lower log-loss and higher AUC are better). Bold marks the best deployable
+method. $^{+}$/$^{-}$: significantly worse/better than \ptopofl\ (paired Wilcoxon, Holm,
+$0.05$). $^\diamond$: non-deployable references with the same clustered training as
+\ptopofl.}
+\label{tab:main}
+\resizebox{\textwidth}{!}{\restable{tab_main}}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\resfig{fig_curves}{\textwidth}
+\caption{\textbf{Training curves}: personalised test log-loss of honest clients (mean $\pm$
+std over seeds). All methods are genuinely iterative and converge within $T=150$ rounds.}
+\label{fig:curves}
+\end{figure}
+
+\paragraph{Synthetic federation (A).}
+\ptopofl\ attains the lowest log-loss ($\ResAPtopoLL$) and the highest AUC
+($\ResAPtopoAUC$) of all deployable methods (Table~\ref{tab:main}, Figure~\ref{fig:curves}).
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item It is significantly better than $\ResANBetter$ of the eight baselines, namely the
+    single-model methods (FedAvg $\ResAFedavgLL$, FedProx $\ResAFedproxLL$, SCAFFOLD
+    $\ResAScaffoldLL$, pFedMe $\ResAPfedmeLL$).
+  \item It is statistically indistinguishable from IFCA ($\ResAIfcaLL$), Ditto
+    ($\ResADittoLL$), the PACFL-style baseline ($\ResAPacflLL$) and local training
+    ($\ResALocalLL$).
+\end{itemize}
+The value lies in the partition, not in clustering as such. The descriptor partition
+recovers the latent groups (ARI $\ResAARI$) and is as good as the oracle partition in the
+sense of Section~\ref{sec:theory}: $\rho(\calC_{\mathrm{topo}})=\ResARhoTopo$, against
+$\ResARhoOrac$ for the oracle and $\ResARhoRand$ for a random partition. Correspondingly,
+clustered training on a random partition ($\ResARandomLL$) is barely better than FedAvg,
+while the oracle partition reaches $\ResAOracleLL$.
+
+\paragraph{Label skew (B).}
+Here clients differ through class prevalence. Prevalence changes the feature mixture, but
+not in a way the descriptor separates:
+$\rho(\calC_{\mathrm{topo}})=\ResBRhoTopo$, no better than a random partition
+($\ResBRhoRand$). As Corollary~\ref{cor:endtoend} predicts, \ptopofl\ then performs like
+FedAvg ($\ResBPtopoLL$ vs $\ResBFedavgLL$). Methods that personalise through the loss do
+better: IFCA ($\ResBIfcaLL$) and Ditto ($\ResBDittoLL$, significantly).
+
+\paragraph{Fed-Heart-Disease (HD).}
+On the real federation, personalisation pays off.
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \ptopofl\ lowers the log-loss of FedAvg from $\ResHDFedavgLL$ to $\ResHDPtopoLL$ (AUC
+    $\ResHDFedavgAUC$ to $\ResHDPtopoAUC$). It is significantly better than $\ResHDNBetter$ of
+    the eight baselines, and no baseline is significantly better than it.
+  \item Its log-loss is close to that of the best deployable method (\ResHDBest,
+    $\ResHDDittoLL$) and of the oracle partition ($\ResHDOracleLL$), and lower than that of
+    clustered training on a random partition ($\ResHDRandomLL$) or on the subspace partition
+    of the PACFL-style baseline ($\ResHDPacflLL$).
+\end{itemize}
+The dispersion criterion is only a coarse guide on this federation. With $K=4$ sites and
+$M=2$ clusters there are only seven possible partitions. Moreover, the local optima from which
+$\rho$ is computed are estimated from as few as about $32$ training records (the Swiss site),
+so the measured dispersion also reflects estimation noise. Here
+$\rho(\calC_{\mathrm{topo}})=\ResHDRhoTopo$ is \ResHDRhoCmp{} the random-partition value
+($\ResHDRhoRand$; oracle $\ResHDRhoOrac$). We therefore read this experiment as evidence that
+\ptopofl\ is competitive with the best personalised methods on a real cross-silo federation,
+not as a test of the dispersion criterion, which the controlled study of
+Section~\ref{sec:e_alignment} addresses.
+
+\paragraph{Per-client view.}
+Averages can hide clients that personalisation makes worse off. On (A), \ptopofl\ leaves
+$\PCAWorseFedavg$ of the honest clients worse off than FedAvg, the smallest fraction among
+personalised methods, and has the best worst-client loss (Table~\ref{tab:perclient},
+Appendix~\ref{app:extra}). On (B), where its partition is uninformative, the fraction is
+$\PCBWorseFedavg$: the clusters halve the data available to each model without reducing
+heterogeneity. This is the bias--variance trade-off of Theorem~\ref{thm:stochastic}. On the real federation (HD), $\PCHDWorseFedavg$ of the sites are worse off than
+under FedAvg and $\PCHDWorseLocal$ worse off than with local training.
+
+\subsection{When does topology help?}
+\label{sec:e_alignment}
+
+\begin{table}[t]
+\centering\small
+\caption{\textbf{Alignment between geometry and decision rules} (synthetic, $K=8$).
+The first rows show recovery of the latent groups (ARI) and the within-cluster share
+$\rho(\calC)$ of the dispersion of client optima (lower is better). The bottom rows show the
+personalised log-loss. $^\diamond$: non-deployable.}
+\label{tab:alignment}
+\resizebox{\textwidth}{!}{\restable{tab_alignment}}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\resfig{fig_alignment}{0.48\textwidth}
+\caption{\textbf{Gain over FedAvg against the between-cluster share $1-\rho$} of the
+descriptor partition, for every regime and seed. Corollary~\ref{cor:endtoend} predicts a
+monotone relation; the correlation is $r=\AlignCorr$.}
+\label{fig:alignment}
+\end{figure}
+
+Table~\ref{tab:alignment} varies one ingredient at a time.
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{Geometry and decision rule co-vary.} When the groups differ in intrinsic
+    dimension and in decision rule, both the PH descriptor and the subspace descriptor
+    recover the groups (ARI $\AlignAlARI$ and $\AlignAlARIsub$). When they differ in
+    \emph{tail behaviour} instead, only the PH descriptor does (ARI $\AlignTaARI$ against
+    $\AlignTaARIsub$). In that setting the PACFL-style baseline is no better than FedAvg
+    ($\AlignTaPacfl$ vs $\AlignTaFedavg$), while \ptopofl\ matches IFCA and the oracle
+    ($\AlignTaPtopo$, $\AlignTaIfca$). This is the case in which a scale-free, non-linear
+    shape summary earns its place.
+  \item \emph{Concept only.} With identical geometry the descriptor carries no signal (ARI
+    $\AlignCoARI$; $\rho=\AlignCoRhoTopo$ against $\AlignCoRhoOrac$ for the oracle), and
+    \ptopofl\ is no better than FedAvg ($\AlignCoPtopo$ vs $\AlignCoFedavg$). Loss-based
+    personalisation wins clearly (IFCA $\AlignCoIfca$, Ditto $\AlignCoDitto$). This is a
+    structural limitation of any feature-only descriptor.
+  \item \emph{Geometry only.} The groups are recovered (ARI $\AlignGeARI$), but the optimal
+    models barely differ ($\rho_{\mathrm{oracle}}=\AlignGeRhoOrac$). Clustering then neither
+    helps nor hurts (gain $\AlignGeGain$).
+\end{itemize}
+Across all regimes and seeds, the gain over FedAvg tracks the between-cluster share
+$1-\rho(\calC_{\mathrm{topo}})$ ($r=\AlignCorr$, Figure~\ref{fig:alignment}), as
+Corollary~\ref{cor:endtoend} predicts. The quantity $\rho$ is computable whenever local
+optima can be estimated, so a practitioner can check on held-out or simulated data whether
+the descriptor partition is informative before deploying it.
+
+\subsection{Clients with corrupted data}
+\label{sec:e_robust}
+
+\begin{figure}[t]
+\centering
+\resfig{fig_robust}{\textwidth}
+\caption{\textbf{Corrupted clients}: log-loss of the \emph{honest} clients as the fraction
+of corrupted clients grows ($K=10$, federation A). Dashed lines are \ptopofl\ variants
+without trust weights and with the mean/std trust rule.}
+\label{fig:robust}
+\end{figure}
+
+Following the threat model of Section~\ref{sec:framework}, corrupted clients follow the
+protocol but hold corrupted data. We use three corruptions:
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item the attack of the earlier version: a feature shift plus $40\%$ label flips;
+  \item heavy-tailed feature corruption plus $40\%$ label flips;
+  \item label inversion alone.
+\end{itemize}
+The robust aggregators coordinate-wise median and trimmed mean \citep{yin2018byzantine} are
+added as baselines. Figure~\ref{fig:robust} and Table~\ref{tab:detection} (Appendix) show
+three findings.
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{Feature corruption.} When corruption alters the features, \ptopofl\ protects
+    honest clients much better than FedAvg and the robust aggregators. With
+    $\RobFracMid\%$ heavy-tailed corruption it reaches $\RobGePtopo$, against
+    $\RobGeFedavg$ for FedAvg and $\RobGeMedian$ for the median, on par with Ditto
+    ($\RobGeDitto$) and IFCA ($\RobGeIfca$).
+  \item \emph{The protection does not come from trust weights.} Descriptor-based detection
+    is weak: averaged over attacks and fractions, the robust score flags
+    $\RobTPR$ of the corrupted clients and $\RobFPR$ of the honest ones. Removing trust
+    changes little (shift-plus-flips attack, $\RobFracMid\%$: $\RobPoPtopoNT$ without trust
+    against $\RobPoPtopo$ with it). The protection comes from personalisation: corrupted
+    clients mostly harm the cluster that hosts them.
+  \item \emph{Label inversion} leaves the geometry intact. \ptopofl\ then degrades like
+    FedAvg, and slightly more at $\RobFracMax\%$ ($\RobLfPtopoMax$ against
+    $\RobLfFedavgMax$); Ditto is the most robust method ($\RobLfDittoMax$).
+\end{itemize}
+These results support Section~\ref{sec:theory_trust}. The guarantees on trust weights are
+conditional on separation in descriptor space, which corrupted clients often do not exhibit
+when the honest population is itself heterogeneous. We therefore do not claim adversarial
+robustness, and we recommend Byzantine-robust aggregation where it matters.
+
+\subsection{Privacy: what the descriptor costs and what attacks see}
+\label{sec:e_privacy}
+
+\begin{figure}[t]
+\centering
+\resfig{fig_privacy}{\textwidth}
+\caption{\textbf{Privacy.} (a) Agreement between the partitions obtained from noisy and
+clean descriptors, as a function of the noise level; the dashed line is the radius of
+Corollary~\ref{cor:gauss}. (b) Personalised log-loss under record-level
+$(\varepsilon,10^{-5})$-DP (Proposition~\ref{prop:dp}). (c) Membership-inference AUC on the
+models clients transmit.}
+\label{fig:privacy}
+\end{figure}
+
+\paragraph{How much noise does the partition tolerate?}
+The partition is preserved (ARI $\ge0.9$) up to $\sigma_\phi=\DPsigmaOK$
+(Figure~\ref{fig:privacy}a). The radius of Corollary~\ref{cor:gauss} is conservative
+($\DPsafeSigma$), and a strictly positive margin exists in $\DPgapPos$ of the seeds. Under
+the worst-case sensitivity $2$ of Proposition~\ref{prop:dp}, a noise level of
+$\sigma_\phi=\DPsigmaOK$ corresponds to $\varepsilon\approx\DPepsOK$ for the descriptor
+release alone \citep[analytic Gaussian mechanism,][]{balle2018improving}, which is not a
+meaningful guarantee. For context only: removing one record changes $\hat\phi_k$ by a median
+of $\DPlooMed$ (maximum $\DPlooMax$ over the records tried), whereas the median distance
+between clients is $\DPinterMed$. This is an empirical observation, not a sensitivity bound.
+
+\paragraph{Record-level DP for everything a client transmits.}
+We run DP-GD with the accounting of Proposition~\ref{prop:dp} on federation (A) with larger
+clients ($n_k\in[400,1200]$, $C=\DPclip$, $T\tau=\DPsteps$ noisy steps) and compare three
+variants:
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item DP-FedAvg, which spends the whole budget on gradients;
+  \item DP-\ptopofl, which spends half of the budget on the descriptor;
+  \item DP-\ptopofl\ with a non-private descriptor. This variant protects only the
+    models: the guarantee then covers $\theta_k$ and not $\phi_k$.
+\end{itemize}
+The results are in Figure~\ref{fig:privacy}b and Table~\ref{tab:privacy}.
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{Without privacy}, \ptopofl\ improves on FedAvg ($\DPPtopoLLinf$ vs
+    $\DPFedavgLLinf$).
+  \item \emph{With the full guarantee}, at $\varepsilon=\DPepsMid$ the descriptor noise
+    ($\sigma_\phi=\DPsigPhiMid$) erases the partition (ARI $\DPPtopoARImid$), and DP-\ptopofl\
+    ($\DPPtopoLLmid$) is worse than DP-FedAvg ($\DPFedavgLLmid$).
+  \item \emph{If only the models are protected}, the partition keeps its value
+    ($\DPPtopoNPLLmid$).
+\end{itemize}
+Local training, which releases nothing, reaches $\DPLocalLL$ here because these clients are
+large.
+
+\paragraph{Attacks.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{Membership inference.} A loss-threshold attack \citep{yeom2018privacy} on the
+    last model each client transmits achieves an AUC of $\DPFedavgMIAinf$ (FedAvg) and
+    $\DPPtopoMIAinf$ (\ptopofl) even without DP, close to chance for this regularised,
+    low-capacity model. Its weakness should not be read as evidence of privacy: stronger
+    attacks and higher-capacity models leak more.
+  \item \emph{Property inference.} The descriptor itself leaks population-level properties
+    \citep{melis2019exploiting}. From clean descriptors, a logistic classifier recovers a
+    client's latent geometry group with leave-one-out accuracy $\PropInfClean$. This falls to
+    $\PropInfMid$, no better than chance, only at the noise level that also destroys the
+    partition.
+\end{itemize}
+
+In short, the descriptor is useful exactly because it reveals client-level geometry. With
+the only sensitivity bound we can prove, protecting it under record-level DP removes its
+usefulness. Deployments must decide whether population-level geometry is sensitive.
+Low-sensitivity topological summaries \citep{kang2024differentially} are the natural next
+step.
+
+\subsection{Ablations and sensitivity}
+\label{sec:e_ablation}
+
+\begin{table}[t]
+\centering\small
+\caption{\textbf{Ablation} on federation (A) (log-loss, mean $\pm$ std over seeds).}
+\label{tab:ablation}
+\restable{tab_ablation}
+\end{table}
+
+Table~\ref{tab:ablation} shows four things.
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{Clustering is the active ingredient.} With $M=1$ the method reduces to
+    weighted FedAvg ($\AblNoClust$ against $\AblFull$).
+  \item \emph{Topology weights and trust weights have no measurable effect on clean data}
+    (uniform weights $\AblUnif$, no trust $\AblNoTrust$). We keep them, but their benefit
+    is not demonstrated here.
+  \item \emph{Calibration matters.} The uncalibrated $\alpha=0.3$ of the earlier version
+    costs $\AblVoneAlpha$ against $\AblFull$. The calibrated value is close to $\alpha=0$
+    ($\AblAlphaZero$), and $\alpha=1$ falls back to consensus ($\AblAlphaOne$).
+  \item \emph{Insensitivity to $\tau$.} With calibration, performance is essentially
+    insensitive to $\tau$ (Table~\ref{tab:alphatau}).
+\end{itemize}
+The sensitivity analysis (Table~\ref{tab:sensitivity}) shows that the method is insensitive
+to $M\in\{2,3,4\}$ and to $n_{\mathrm{sub}}\in\{40,80,160\}$. Averaging several subsamples
+matters ($n_{\mathrm{rep}}=1$ degrades group recovery), and $\ell_2$ normalisation of the
+descriptor works better than per-coordinate standardisation. A drift-monitoring experiment,
+in which the descriptors of two clients change progressively, is reported in
+Appendix~\ref{app:extra} (detection AUC $\ContAUC$).
+
+% --------------------------------------------------------------------------
+\section{Related work}
+\label{sec:related}
+% --------------------------------------------------------------------------
+
+\paragraph{Clustered and personalised FL.}
+IFCA \citep{ghosh2020efficient} alternates client-side cluster assignment by loss with
+per-cluster training. CFL \citep{sattler2020clustered} and hierarchical clustering of updates
+\citep{briggs2020federated} split clients by the geometry of their updates, and FeSEM
+\citep{long2023multi} by distances between models. These signals are model-dependent and
+recomputed during training. One-shot alternatives summarise each client's data once: local
+$k$-means centroids in $k$-FED \citep{dennis2021heterogeneity}, and principal subspaces in
+PACFL \citep{vahidian2023efficient}, the closest prior work to ours. Our experiments show
+that persistent homology and linear subspaces see different things (Table~\ref{tab:alignment}).
+Personalisation without clustering includes Moreau-envelope methods
+\citep{t2020personalized}, proximal personal models \citep{li2021ditto}, model mixtures
+\citep{deng2020adaptive,hanzely2020federated} and prototype sharing \citep{tan2022fedproto}.
+
+\paragraph{Theory of local steps.}
+Analyses of local SGD under heterogeneity
+\citep{stich2019local,khaled2020tighter,koloskova2020unified,woodworth2020minibatch,karimireddy2020scaffold}
+and fixed-point analyses \citep{malinovsky2020local,charles2021convergence,pathak2020fedsplit}
+show that local steps bias the limit. We extend the fixed-point view to clustered, weighted
+and blended aggregation, and give an exact formula for the effective strength of blending;
+blending is an adapt-then-combine diffusion step \citep{sayed2014adaptation}.
+
+\paragraph{Topology in machine learning and in FL.}
+PH has been used in centralised learning for graphs, time series, regularisation and medical
+images
+\citep{hofer2017deep,umeda2017time,chen2019topological,clough2020topological,abaach2023geotop,gouiaa2024taelcore},
+with software such as GUDHI, Ripser and giotto-tda \citep{gudhi,ripser,tauzin2021giotto}.
+In FL, persistence diagrams of model weights have been used to detect poisoning
+\citep{ma2024federated,alipourjeddi2025topology}, and topological embeddings of learned
+representations have been used to align clients \citep{hu2025fedtopo}. We instead use
+descriptors of each client's \emph{input} distribution, computed once, to structure the
+federation, and we analyse the resulting algorithm.
+
+\paragraph{Privacy and robustness.}
+Gradient inversion \citep{zhu2019deep,geiping2020inverting}, membership inference
+\citep{yeom2018privacy} and property inference \citep{melis2019exploiting} motivate DP
+\citep{dwork2014algorithmic,abadi2016deep,wei2020federated} and secure aggregation
+\citep{bonawitz2017practical}. DP for topological summaries is studied by
+\citet{kang2024differentially}. Byzantine-robust aggregation
+\citep{blanchard2017machine,yin2018byzantine} addresses adversaries that our descriptor-based
+trust cannot.
+
+\paragraph{FL in healthcare.}
+Multi-site clinical data motivate FL \citep{rieke2020future}. FLamby
+\citep{terrail2022flamby} provides realistic cross-silo benchmarks, including the
+heart-disease partition used here, and topological methods have been applied to
+lung-transplant outcomes \citep{tran2025topoattention}.
+
+% --------------------------------------------------------------------------
+\section{Discussion and limitations}
+\label{sec:discussion}
+% --------------------------------------------------------------------------
+
+\ptopofl\ is a clustered FL method whose partition is fixed in advance from feature
+geometry. Our analysis shows that such a method converges linearly for any partition. It
+also shows that the benefit of the partition is governed by a single measurable quantity
+$\rho(\calC)$, and that blending must be calibrated against local computation. Experiments
+show when the PH descriptor provides a good partition: when clients that differ in
+non-linear, scale-free aspects of feature geometry also differ in the model they need. They
+also show when it does not.
+
+\paragraph{Limitations.}
+\begin{enumerate}[label=(\roman*),leftmargin=1.6em,itemsep=2pt]
+  \item \emph{Convexity.} The theory assumes strongly convex and smooth losses. Deep models,
+    where descriptors could be computed on learned representations, are not covered, and
+    we report no deep-learning experiments.
+  \item \emph{Fixed partition.} The partition is fixed, and re-clustering under drift is
+    not analysed.
+  \item \emph{What the descriptor sees.} The descriptor ignores labels, location and scale.
+    Concept shift, label shift and mean shifts are invisible to it, and loss-based methods
+    (IFCA, Ditto) should be preferred there. Its components are not Lipschitz functions of
+    the data, so there is no data-level stability guarantee.
+  \item \emph{Corrupted clients.} Descriptor-based trust detected few corrupted clients, it
+    can down-weight honest but unusual sites, and it is powerless against forged
+    descriptors.
+  \item \emph{Privacy.} \ptopofl\ is no more private than FedAvg, and its descriptor leaks
+    population-level properties. Record-level DP that covers the descriptor destroys the
+    partition under the sensitivity bound we can prove.
+  \item \emph{Evidence base.} The evidence consists of synthetic federations and one small
+    real federation ($K=4$). Larger real benchmarks are needed.
+\end{enumerate}
+
+% --------------------------------------------------------------------------
+\section{Conclusion}
+\label{sec:conclusion}
+% --------------------------------------------------------------------------
+
+We studied topology-guided clustered federated learning, in which a persistent-homology
+descriptor of each client's features, computed once, fixes which clients share a model. For
+the complete algorithm we proved linear convergence and characterised the fixed point
+explicitly, through local-step drift, the effective strength of blending with a calibration
+rule, and a stochastic floor. We also showed that personalisation lowers the heterogeneity
+floor in proportion to a measurable between-cluster share. Experiments confirm these
+predictions. The descriptor partition is as good as an oracle partition when feature geometry
+and decision rules co-vary, it captures shape differences that linear subspaces miss, and it
+offers no advantage over FedAvg when heterogeneity is invisible in the features. We hope that
+this explicit delimitation, which states both where the descriptor helps and where it does
+not, makes topological summaries a well-understood tool for structuring federations.
+
+% --------------------------------------------------------------------------
+\section*{Broader Impact Statement}
+% --------------------------------------------------------------------------
+\ptopofl\ targets settings such as multi-site healthcare. Three risks deserve emphasis.
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \emph{It is not a privacy technology.} Without DP and secure aggregation, model
+    updates are as exposed as in FedAvg, and the descriptor reveals population-level
+    properties of a site, such as the presence of distinct subpopulations. It must not be
+    presented as protecting patient privacy.
+  \item \emph{Trust weights carry a fairness risk.} They can down-weight legitimate sites
+    with unusual populations, for example small hospitals specialising in rare conditions.
+    Deployments should audit false-flag rates per site, which we report, and floor the
+    trust weights.
+  \item \emph{Personalisation can disadvantage some clients.} Personalised models can be
+    worse than the global model for some clients, and per-client results, not only
+    averages, should be inspected before deployment.
+\end{itemize}
+
+\section*{Acknowledgements}
+[Omitted for anonymous review.]
+
+% ==========================================================================
+\appendix
+\input{appendix_proofs}
+\input{appendix_extra}

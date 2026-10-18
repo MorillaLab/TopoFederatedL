@@ -1,0 +1,5 @@
+numpy>=1.23
+scipy>=1.9
+scikit-learn>=1.2      # AgglomerativeClustering(metric=...) requires >= 1.2
+matplotlib>=3.5
+ripser>=0.6            # optional: fast H1; a pure-NumPy fallback with identical output is built in
