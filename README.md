@@ -23,15 +23,18 @@
 
 ## Protocol
 
-```
-Round 0 (once)    client k -> server : phi_k in R^46       (PH descriptor)
-                  server             : partition C, trust t_k, weights w_k, masses pi_j
-Every round t     server -> client k : theta_{c(k)}^t      (personalised model of its cluster)
-                  client k           : tau gradient steps on its local loss
-                  client k -> server : theta_k^{t+1} in R^p
-                  server             : u_j = sum_{k in C_j} w_k theta_k^{t+1}
-                                       theta_j^{t+1} = (1 - alpha) u_j + alpha sum_i pi_i u_i
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/ptopofl_protocol_dark.svg">
+    <img src="assets/ptopofl_protocol_light.svg" width="100%"
+         alt="pTopoFL protocol. Round 0, once: each client computes a 46-dimensional persistent-homology descriptor of its feature cloud and sends it to the server, which builds a partition of the clients, trust scores, weights and cluster masses. Every round: the server sends each client the model of its cluster; the client runs tau local gradient steps and sends back its model; the server forms per-cluster weighted sums (compatible with secure aggregation) and blends them with the consensus.">
+  </picture>
+</p>
+
+Each client sends its descriptor **once**, before training (green). In every round it receives
+the model of its cluster (dashed blue) and returns its locally updated model (solid blue). The
+server uses the descriptors only to fix the partition and the weights. It uses the models only
+through per-cluster weighted sums.
 
 **Scope.** pTopoFL sends model parameters every round, exactly like FedAvg, so it is **not a privacy
 mechanism**.
@@ -156,6 +159,7 @@ TopoFederatedL/
 ├── notebooks/ptopofl_v2_colab.ipynb <- one-click reproduction in Google Colab
 ├── results_v2/                      <- outputs of the run reported in the paper
 ├── paper/                           <- LaTeX sources of the revised manuscript (+ TMLR style)
+├── assets/                          <- protocol figure (light/dark SVG and PNG) and its TikZ source
 ├── .github/workflows/ci.yml         <- tests on every push
 ├── Makefile · CHANGELOG.md · CITATION.cff · CONTRIBUTING.md · LICENSE (GPL-3.0)
 └── README.md
