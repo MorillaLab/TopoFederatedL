@@ -157,7 +157,7 @@ TopoFederatedL/
 ├── requirements.txt
 ├── tests/test_ptopofl_v2.py         <- implementation and theorem checks (pytest)
 ├── notebooks/ptopofl_v2_colab.ipynb <- one-click reproduction in Google Colab
-├── figures/                      <- outputs of the run reported in the paper
+├── figures/                         <- outputs of the run reported in the paper
 ├── paper/                           <- LaTeX sources of the revised manuscript (+ TMLR style)
 ├── assets/                          <- protocol figure (light/dark SVG and PNG) and its TikZ source
 ├── .github/workflows/ci.yml         <- tests on every push
