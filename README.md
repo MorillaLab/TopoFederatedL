@@ -7,7 +7,7 @@
   <a href="https://github.com/MorillaLab/TopoFederatedL/actions/workflows/ci.yml"><img src="https://github.com/MorillaLab/TopoFederatedL/actions/workflows/ci.yml/badge.svg" alt="tests"/></a>
   <a href="https://colab.research.google.com/github/MorillaLab/TopoFederatedL/blob/main/notebooks/ptopofl_v2_colab.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"/></a>
   <!-- After the v2.0.0 Zenodo release, replace this DOI by the new version DOI. -->
-  <a href="https://doi.org/10.5281/zenodo.18827595"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.18827595.svg"/></a>
+  <a href="https://doi.org/10.5281/zenodo.23470750"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.23470750.svg"/></a>
 </p>
 
 > **Correction notice (v2.0.0).** The numerical results shown in earlier versions of this README and in
