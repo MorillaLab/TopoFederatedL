@@ -123,7 +123,7 @@ H₁ backends, data loader). They also check the main theoretical results on the
 - the DP accounting (Proposition 2);
 - SCAFFOLD reaches the global optimum.
 
-They run on every push, on Python 3.9, 3.11 and 3.12.
+They run on every push, on Python 3.10, 3.12 and 3.14.
 
 ## Using the components
 
