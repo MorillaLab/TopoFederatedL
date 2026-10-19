@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL_v3-blue.svg"/></a>
-  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.9%2B-3776ab?logo=python&logoColor=white"/></a>
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white"/></a>
   <img src="https://img.shields.io/badge/version-2.0.0-2ea44f"/>
   <a href="https://github.com/MorillaLab/TopoFederatedL/actions/workflows/ci.yml"><img src="https://github.com/MorillaLab/TopoFederatedL/actions/workflows/ci.yml/badge.svg" alt="tests"/></a>
   <a href="https://colab.research.google.com/github/MorillaLab/TopoFederatedL/blob/main/notebooks/ptopofl_v2_colab.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"/></a>
