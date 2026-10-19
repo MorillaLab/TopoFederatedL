@@ -28,7 +28,7 @@
 
 ### Added
 - Unit tests that check the implementation and the main theorems on the actual code.
-- GitHub Actions workflow on Python 3.9, 3.11 and 3.12.
+- GitHub Actions workflow on Python 3.10, 3.12 and 3.14.
 - Colab notebook.
 - LaTeX sources of the revised manuscript.
 
